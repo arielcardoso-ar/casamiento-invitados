@@ -1,0 +1,142 @@
+{% extends "invitados/base.html" %}
+
+{% block styles %}
+.stats {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+.gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.5rem;
+}
+.gallery-item {
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s;
+}
+.gallery-item:hover img {
+    transform: scale(1.05);
+}
+.empty {
+    background: white;
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    text-align: center;
+}
+.empty-icon { font-size: 4rem; margin-bottom: 1rem; }
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.95);
+}
+.modal-content {
+    position: relative;
+    margin: 5% auto;
+    max-width: 90%;
+    max-height: 80vh;
+}
+.modal-content img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+}
+.modal-close {
+    position: absolute;
+    top: 15px;
+    right: 35px;
+    color: white;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.modal-info {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+}
+{% endblock %}
+
+{% block content %}
+<div class="stats">
+    📷 {{ fotos|length }} fotos compartidas
+</div>
+
+{% if fotos %}
+<div class="gallery">
+    {% for foto in fotos %}
+    <div class="gallery-item" onclick="openModal('/{{ foto.ruta }}', '{{ foto.subido_por }}', '{{ foto.descripcion }}')">
+        <img src="/{{ foto.thumbnail or foto.ruta }}" alt="{{ foto.descripcion or 'Foto' }}" loading="lazy">
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty">
+    <div class="empty-icon">📷</div>
+    <h3>Todavía no hay fotos</h3>
+    <p>Sé el primero en compartir</p>
+</div>
+{% endif %}
+
+<div id="imageModal" class="modal" onclick="closeModal()">
+    <span class="modal-close">&times;</span>
+    <div class="modal-content">
+        <img id="modalImage" src="" alt="Foto">
+        <div class="modal-info">
+            <p><strong>Subido por:</strong> <span id="modalAuthor"></span></p>
+            <p id="modalDescription"></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openModal(imageSrc, author, description) {
+    const modal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+    const modalAuthor = document.getElementById('modalAuthor');
+    const modalDescription = document.getElementById('modalDescription');
+    
+    modal.style.display = 'block';
+    modalImage.src = imageSrc;
+    modalAuthor.textContent = author;
+    
+    if (description) {
+        modalDescription.innerHTML = '<strong>Descripción:</strong> ' + description;
+        modalDescription.style.display = 'block';
+    } else {
+        modalDescription.style.display = 'none';
+    }
+}
+
+function closeModal() {
+    document.getElementById('imageModal').style.display = 'none';
+}
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeModal();
+    }
+});
+</script>
+{% endblock %}

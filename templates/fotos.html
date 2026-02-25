@@ -1,0 +1,251 @@
+{% extends "invitados/base.html" %}
+
+{% block styles %}
+.upload-container {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.upload-icon {
+    text-align: center;
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+.upload-title {
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 2rem;
+}
+.file-input-wrapper {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+.file-input-wrapper input[type="file"] {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+.file-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.file-button:active {
+    transform: scale(0.98);
+}
+.preview {
+    display: none;
+    margin: 1rem 0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.preview img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+.optional-fields {
+    display: none;
+    margin-top: 1rem;
+}
+.optional-fields.show {
+    display: block;
+}
+.input-group {
+    margin-bottom: 1rem;
+}
+.input-group input,
+.input-group textarea {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 1rem;
+}
+.input-group input:focus,
+.input-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+}
+.btn-primary {
+    width: 100%;
+    padding: 1.25rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.btn-secondary {
+    width: 100%;
+    padding: 1rem;
+    background: transparent;
+    color: #667eea;
+    border: 2px solid #667eea;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 1rem;
+}
+.status {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 10px;
+    text-align: center;
+    font-weight: 600;
+    display: none;
+}
+.status.success { background: #d4edda; color: #155724; }
+.status.error { background: #f8d7da; color: #721c24; }
+{% endblock %}
+
+{% block content %}
+<div class="upload-container">
+    <div class="upload-icon">📸</div>
+    <h2 class="upload-title">Compartí tu Foto</h2>
+    
+    <form id="uploadForm" enctype="multipart/form-data">
+        <!-- Botón grande para seleccionar foto -->
+        <div class="file-input-wrapper">
+            <input type="file" id="foto" name="foto" accept="image/*;capture" required>
+            <div class="file-button">
+                <span>📷</span>
+                <span id="fileButtonText">Elegir Foto</span>
+            </div>
+        </div>
+
+        <!-- Preview de la imagen -->
+        <div id="preview" class="preview">
+            <img id="previewImg" src="" alt="Preview">
+        </div>
+
+        <!-- Campos opcionales (se muestran después de elegir foto) -->
+        <div id="optionalFields" class="optional-fields">
+            <div class="input-group">
+                <input type="text" id="nombre" name="nombre" placeholder="Tu nombre (opcional)">
+            </div>
+
+            <div class="input-group">
+                <textarea id="descripcion" name="descripcion" rows="2" placeholder="Descripción (opcional)"></textarea>
+            </div>
+
+            <button type="submit" class="btn-primary" id="uploadBtn">
+                <span id="uploadText">✨ Subir Foto</span>
+                <span id="uploadSpinner" style="display: none;">⏳ Subiendo...</span>
+            </button>
+
+            <button type="button" class="btn-secondary" onclick="resetForm()">
+                ↩️ Elegir otra foto
+            </button>
+        </div>
+    </form>
+
+    <div id="uploadStatus" class="status"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const fotoInput = document.getElementById('foto');
+const preview = document.getElementById('preview');
+const previewImg = document.getElementById('previewImg');
+const optionalFields = document.getElementById('optionalFields');
+const fileButtonText = document.getElementById('fileButtonText');
+
+// Cuando se selecciona una foto
+fotoInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        // Mostrar preview
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            preview.style.display = 'block';
+        }
+        reader.readAsDataURL(file);
+        
+        // Mostrar campos opcionales
+        optionalFields.classList.add('show');
+        fileButtonText.textContent = file.name;
+    }
+});
+
+// Reset form
+function resetForm() {
+    document.getElementById('uploadForm').reset();
+    preview.style.display = 'none';
+    optionalFields.classList.remove('show');
+    fileButtonText.textContent = 'Elegir Foto';
+    document.getElementById('uploadStatus').style.display = 'none';
+}
+
+// Submit form
+document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const uploadBtn = document.getElementById('uploadBtn');
+    const uploadText = document.getElementById('uploadText');
+    const uploadSpinner = document.getElementById('uploadSpinner');
+    const uploadStatus = document.getElementById('uploadStatus');
+    
+    uploadBtn.disabled = true;
+    uploadText.style.display = 'none';
+    uploadSpinner.style.display = 'inline';
+    uploadStatus.style.display = 'none';
+    
+    try {
+        const response = await fetch('/api/fotos/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            uploadStatus.className = 'status success';
+            uploadStatus.textContent = '✓ ¡Foto subida! Gracias por compartir';
+            uploadStatus.style.display = 'block';
+            
+            // Reset después de 2 segundos
+            setTimeout(() => {
+                resetForm();
+            }, 2000);
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        uploadStatus.className = 'status error';
+        uploadStatus.textContent = '✗ Error: ' + error.message;
+        uploadStatus.style.display = 'block';
+        
+        uploadBtn.disabled = false;
+        uploadText.style.display = 'inline';
+        uploadSpinner.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}
