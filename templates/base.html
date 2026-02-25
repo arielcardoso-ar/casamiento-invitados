@@ -52,6 +52,7 @@
         <div class="nav">
             <a href="/" class="{% if request.path == '/' %}active{% endif %}">📸 Subir</a>
             <a href="/galeria" class="{% if request.path == '/galeria' %}active{% endif %}">🖼️ Galería</a>
+            <a href="/qr-page" class="{% if request.path == '/qr-page' %}active{% endif %}">📱 QR</a>
         </div>
         
         {% block content %}{% endblock %}

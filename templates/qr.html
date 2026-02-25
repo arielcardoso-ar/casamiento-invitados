@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block styles %}
+.qr-container {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.qr-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 1rem;
+}
+.qr-subtitle {
+    color: #666;
+    margin-bottom: 2rem;
+}
+.qr-image-container {
+    background: #f8f8f8;
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+}
+.qr-image {
+    max-width: 300px;
+    width: 100%;
+    height: auto;
+    border: 4px solid white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.instructions {
+    background: #f0f0f0;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+.instructions h3 {
+    color: #667eea;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+.instructions ol {
+    padding-left: 1.5rem;
+    line-height: 1.8;
+}
+.instructions li {
+    margin-bottom: 0.5rem;
+    color: #333;
+}
+.link-box {
+    background: #f8f8f8;
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 1rem 0;
+    display: flex;
+    gap: 0.5rem;
+}
+.link-box input {
+    flex: 1;
+    padding: 0.75rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    background: white;
+}
+.btn-copy {
+    padding: 0.75rem 1.5rem;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.btn-copy:active {
+    transform: scale(0.98);
+}
+.copy-status {
+    text-align: center;
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-weight: 600;
+    margin-top: 0.5rem;
+    display: none;
+}
+.copy-status.success {
+    background: #d4edda;
+    color: #155724;
+    display: block;
+}
+.actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+}
+.btn-action {
+    flex: 1;
+    padding: 1rem;
+    border-radius: 10px;
+    font-weight: 600;
+    text-decoration: none;
+    text-align: center;
+    transition: all 0.3s;
+}
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+.btn-secondary {
+    background: white;
+    color: #667eea;
+    border: 2px solid #667eea;
+}
+{% endblock %}
+
+{% block content %}
+<div class="qr-container">
+    <h2 class="qr-title">📱 Código QR</h2>
+    <p class="qr-subtitle">Escaneá para subir fotos</p>
+    
+    <div class="qr-image-container">
+        <img src="/qr" alt="Código QR" class="qr-image">
+    </div>
+    
+    <div class="instructions">
+        <h3>¿Cómo usar el QR?</h3>
+        <ol>
+            <li>Abrí la cámara de tu celular</li>
+            <li>Apuntá al código QR</li>
+            <li>Tocá la notificación que aparece</li>
+            <li>¡Listo! Ya podés subir fotos</li>
+        </ol>
+    </div>
+    
+    <div class="instructions">
+        <h3>🔗 O compartí este link:</h3>
+        <div class="link-box">
+            <input type="text" id="photoLink" value="{{ request.host_url }}" readonly>
+            <button onclick="copyLink()" class="btn-copy">📋 Copiar</button>
+        </div>
+        <div id="copyStatus" class="copy-status"></div>
+    </div>
+    
+    <div class="actions">
+        <a href="/" class="btn-action btn-primary">📸 Subir Foto</a>
+        <a href="/galeria" class="btn-action btn-secondary">🖼️ Ver Galería</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyLink() {
+    const linkInput = document.getElementById('photoLink');
+    const copyStatus = document.getElementById('copyStatus');
+    
+    linkInput.select();
+    linkInput.setSelectionRange(0, 99999);
+    
+    navigator.clipboard.writeText(linkInput.value).then(() => {
+        copyStatus.className = 'copy-status success';
+        copyStatus.textContent = '✓ Link copiado';
+        
+        setTimeout(() => {
+            copyStatus.style.display = 'none';
+        }, 2000);
+    }).catch(err => {
+        alert('Error al copiar: ' + err);
+    });
+}
+</script>
+{% endblock %}

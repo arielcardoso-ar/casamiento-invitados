@@ -49,6 +49,11 @@ def galeria():
     fotos = db.get_fotos()
     return render_template('galeria.html', wedding=WEDDING_DATA, fotos=fotos)
 
+@app.route('/qr-page')
+def qr_page():
+    """Página del código QR"""
+    return render_template('qr.html', wedding=WEDDING_DATA)
+
 @app.route('/qr')
 def qr_code():
     """Generar código QR"""
