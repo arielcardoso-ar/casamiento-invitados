@@ -1,164 +1,224 @@
 {% extends "base.html" %}
 
 {% block styles %}
-.upload-container {
+.card {
     background: white;
-    border-radius: 16px;
+    border-radius: 20px;
     padding: 1.5rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15);
 }
-.upload-icon {
+
+/* Zona de drop */
+.drop-zone {
+    border: 3px dashed #c084fc;
+    border-radius: 16px;
+    padding: 2.5rem 1rem;
     text-align: center;
-    font-size: 4rem;
-    margin-bottom: 1rem;
-}
-.upload-title {
-    text-align: center;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #333;
-    margin-bottom: 2rem;
-}
-.file-input-wrapper {
+    cursor: pointer;
+    transition: all 0.3s;
+    background: #faf5ff;
     position: relative;
-    margin-bottom: 1.5rem;
 }
-.file-input-wrapper input[type="file"] {
+.drop-zone.dragover {
+    border-color: #7c3aed;
+    background: #ede9fe;
+    transform: scale(1.01);
+}
+.drop-zone input[type="file"] {
     position: absolute;
+    inset: 0;
     opacity: 0;
+    cursor: pointer;
     width: 100%;
     height: 100%;
-    cursor: pointer;
 }
-.file-button {
+.drop-icon { font-size: 3.5rem; margin-bottom: 0.5rem; }
+.drop-text { font-size: 1.2rem; font-weight: 700; color: #7c3aed; }
+.drop-hint { font-size: 0.9rem; color: #9ca3af; margin-top: 0.5rem; }
+
+/* Preview grid */
+.preview-section { display: none; margin-top: 1.5rem; }
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+.preview-count {
+    font-weight: 700;
+    color: #7c3aed;
+}
+.btn-clear {
+    padding: 0.4rem 1rem;
+    background: #fee2e2;
+    color: #dc2626;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+.preview-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+}
+.preview-item {
+    aspect-ratio: 1;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+.preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.preview-item .remove {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 14px;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    padding: 1.5rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 12px;
-    font-size: 1.2rem;
-    font-weight: 700;
-    text-align: center;
-    cursor: pointer;
-    transition: transform 0.2s;
+    line-height: 1;
 }
-.file-button:active {
-    transform: scale(0.98);
-}
-.preview {
+.preview-item .status-icon {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    background: rgba(0,0,0,0.4);
     display: none;
-    margin: 1rem 0;
+}
+.preview-item.uploading .status-icon { display: flex; }
+.preview-item.done .status-icon { display: flex; background: rgba(34,197,94,0.6); }
+.preview-item.error .status-icon { display: flex; background: rgba(239,68,68,0.5); }
+
+/* Campos opcionales */
+.optional-section { margin-top: 1.5rem; }
+.section-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+}
+.input-field {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    border: 2px solid #e5e7eb;
     border-radius: 12px;
-    overflow: hidden;
-}
-.preview img {
-    width: 100%;
-    height: auto;
-    display: block;
-}
-.optional-fields {
-    display: none;
-    margin-top: 1rem;
-}
-.optional-fields.show {
-    display: block;
-}
-.input-group {
-    margin-bottom: 1rem;
-}
-.input-group input,
-.input-group textarea {
-    width: 100%;
-    padding: 1rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 10px;
     font-size: 1rem;
+    margin-bottom: 0.75rem;
+    transition: border-color 0.2s;
 }
-.input-group input:focus,
-.input-group textarea:focus {
+.input-field:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: #7c3aed;
 }
-.btn-primary {
+
+/* Botón de subir */
+.btn-upload {
     width: 100%;
-    padding: 1.25rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 1.1rem;
+    background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
     color: white;
     border: none;
-    border-radius: 12px;
+    border-radius: 14px;
     font-size: 1.2rem;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.3s;
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
 }
-.btn-primary:disabled {
-    opacity: 0.5;
+.btn-upload:disabled {
+    opacity: 0.6;
     cursor: not-allowed;
 }
-.btn-secondary {
-    width: 100%;
-    padding: 1rem;
-    background: transparent;
-    color: #667eea;
-    border: 2px solid #667eea;
-    border-radius: 10px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    margin-bottom: 1rem;
+.btn-upload:active:not(:disabled) {
+    transform: scale(0.98);
 }
+
+/* Progress bar */
+.progress-bar {
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 99px;
+    margin-top: 1rem;
+    overflow: hidden;
+    display: none;
+}
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #7c3aed, #a855f7);
+    border-radius: 99px;
+    transition: width 0.3s;
+    width: 0%;
+}
+
+/* Status */
 .status {
     margin-top: 1rem;
     padding: 1rem;
-    border-radius: 10px;
+    border-radius: 12px;
     text-align: center;
     font-weight: 600;
     display: none;
+    font-size: 1.1rem;
 }
-.status.success { background: #d4edda; color: #155724; }
-.status.error { background: #f8d7da; color: #721c24; }
+.status.success { background: #dcfce7; color: #166534; }
+.status.error { background: #fee2e2; color: #991b1b; }
 {% endblock %}
 
 {% block content %}
-<div class="upload-container">
-    <div class="upload-icon">📸</div>
-    <h2 class="upload-title">Compartí tu Foto</h2>
-    
+<div class="card">
     <form id="uploadForm" enctype="multipart/form-data">
-        <!-- Botón grande para seleccionar foto -->
-        <div class="file-input-wrapper">
-            <input type="file" id="foto" name="foto" accept="image/*;capture" required>
-            <div class="file-button">
-                <span>📷</span>
-                <span id="fileButtonText">Elegir Foto</span>
-            </div>
+
+        <!-- Zona de selección -->
+        <div class="drop-zone" id="dropZone">
+            <input type="file" id="fotos" name="fotos" accept="image/*;capture" multiple>
+            <div class="drop-icon">📷</div>
+            <div class="drop-text">Tocá para elegir fotos</div>
+            <div class="drop-hint">Podés seleccionar varias a la vez</div>
         </div>
 
-        <!-- Preview de la imagen -->
-        <div id="preview" class="preview">
-            <img id="previewImg" src="" alt="Preview">
+        <!-- Preview de fotos seleccionadas -->
+        <div class="preview-section" id="previewSection">
+            <div class="preview-header">
+                <span class="preview-count" id="previewCount"></span>
+                <button type="button" class="btn-clear" onclick="clearAll()">✕ Limpiar</button>
+            </div>
+            <div class="preview-grid" id="previewGrid"></div>
         </div>
 
-        <!-- Campos opcionales (se muestran después de elegir foto) -->
-        <div id="optionalFields" class="optional-fields">
-            <div class="input-group">
-                <input type="text" id="nombre" name="nombre" placeholder="Tu nombre (opcional)">
+        <!-- Campos opcionales -->
+        <div class="optional-section" id="optionalSection" style="display:none">
+            <div class="section-label">Opcional</div>
+            <input type="text" class="input-field" id="nombre" name="nombre" placeholder="👤 Tu nombre">
+            <input type="text" class="input-field" id="descripcion" name="descripcion" placeholder="💬 Descripción">
+
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-fill" id="progressFill"></div>
             </div>
 
-            <div class="input-group">
-                <textarea id="descripcion" name="descripcion" rows="2" placeholder="Descripción (opcional)"></textarea>
-            </div>
-
-            <button type="submit" class="btn-primary" id="uploadBtn">
-                <span id="uploadText">✨ Subir Foto</span>
-                <span id="uploadSpinner" style="display: none;">⏳ Subiendo...</span>
-            </button>
-
-            <button type="button" class="btn-secondary" onclick="resetForm()">
-                ↩️ Elegir otra foto
+            <button type="submit" class="btn-upload" id="uploadBtn">
+                <span id="btnText">✨ Subir Fotos</span>
             </button>
         </div>
     </form>
@@ -169,82 +229,172 @@
 
 {% block scripts %}
 <script>
-const fotoInput = document.getElementById('foto');
-const preview = document.getElementById('preview');
-const previewImg = document.getElementById('previewImg');
-const optionalFields = document.getElementById('optionalFields');
-const fileButtonText = document.getElementById('fileButtonText');
+let selectedFiles = [];
 
-// Cuando se selecciona una foto
-fotoInput.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        // Mostrar preview
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            previewImg.src = e.target.result;
-            preview.style.display = 'block';
-        }
-        reader.readAsDataURL(file);
-        
-        // Mostrar campos opcionales
-        optionalFields.classList.add('show');
-        fileButtonText.textContent = file.name;
-    }
+const dropZone = document.getElementById('dropZone');
+const fotosInput = document.getElementById('fotos');
+const previewSection = document.getElementById('previewSection');
+const previewGrid = document.getElementById('previewGrid');
+const previewCount = document.getElementById('previewCount');
+const optionalSection = document.getElementById('optionalSection');
+const uploadStatus = document.getElementById('uploadStatus');
+
+// Selección de fotos
+fotosInput.addEventListener('change', function(e) {
+    addFiles(Array.from(e.target.files));
+    e.target.value = '';
 });
 
-// Reset form
-function resetForm() {
-    document.getElementById('uploadForm').reset();
-    preview.style.display = 'none';
-    optionalFields.classList.remove('show');
-    fileButtonText.textContent = 'Elegir Foto';
-    document.getElementById('uploadStatus').style.display = 'none';
+// Drag & drop (desktop)
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    addFiles(Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')));
+});
+
+function addFiles(files) {
+    files.forEach(file => {
+        if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
+            selectedFiles.push(file);
+        }
+    });
+    renderPreviews();
 }
 
-// Submit form
+function renderPreviews() {
+    if (selectedFiles.length === 0) {
+        previewSection.style.display = 'none';
+        optionalSection.style.display = 'none';
+        return;
+    }
+
+    previewSection.style.display = 'block';
+    optionalSection.style.display = 'block';
+    previewCount.textContent = `${selectedFiles.length} foto${selectedFiles.length > 1 ? 's' : ''} seleccionada${selectedFiles.length > 1 ? 's' : ''}`;
+    previewGrid.innerHTML = '';
+
+    selectedFiles.forEach((file, index) => {
+        const item = document.createElement('div');
+        item.className = 'preview-item';
+        item.id = `preview-${index}`;
+
+        const img = document.createElement('img');
+        const reader = new FileReader();
+        reader.onload = e => img.src = e.target.result;
+        reader.readAsDataURL(file);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove';
+        removeBtn.innerHTML = '✕';
+        removeBtn.type = 'button';
+        removeBtn.onclick = () => removeFile(index);
+
+        const statusIcon = document.createElement('div');
+        statusIcon.className = 'status-icon';
+
+        item.append(img, removeBtn, statusIcon);
+        previewGrid.appendChild(item);
+    });
+
+    const btnText = document.getElementById('btnText');
+    btnText.textContent = `✨ Subir ${selectedFiles.length} Foto${selectedFiles.length > 1 ? 's' : ''}`;
+}
+
+function removeFile(index) {
+    selectedFiles.splice(index, 1);
+    renderPreviews();
+}
+
+function clearAll() {
+    selectedFiles = [];
+    renderPreviews();
+    uploadStatus.style.display = 'none';
+}
+
+// Upload
 document.getElementById('uploadForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-    
-    const formData = new FormData(this);
+
+    if (selectedFiles.length === 0) return;
+
     const uploadBtn = document.getElementById('uploadBtn');
-    const uploadText = document.getElementById('uploadText');
-    const uploadSpinner = document.getElementById('uploadSpinner');
-    const uploadStatus = document.getElementById('uploadStatus');
-    
+    const btnText = document.getElementById('btnText');
+    const progressBar = document.getElementById('progressBar');
+    const progressFill = document.getElementById('progressFill');
+
     uploadBtn.disabled = true;
-    uploadText.style.display = 'none';
-    uploadSpinner.style.display = 'inline';
+    progressBar.style.display = 'block';
     uploadStatus.style.display = 'none';
-    
-    try {
-        const response = await fetch('/api/fotos/upload', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            uploadStatus.className = 'status success';
-            uploadStatus.textContent = '✓ ¡Foto subida! Gracias por compartir';
-            uploadStatus.style.display = 'block';
-            
-            // Reset después de 2 segundos
-            setTimeout(() => {
-                resetForm();
-            }, 2000);
-        } else {
-            throw new Error(data.message);
+
+    const nombre = document.getElementById('nombre').value;
+    const descripcion = document.getElementById('descripcion').value;
+    let subidas = 0;
+
+    // Marcar todas como uploading
+    selectedFiles.forEach((_, i) => {
+        const item = document.getElementById(`preview-${i}`);
+        if (item) {
+            item.classList.add('uploading');
+            item.querySelector('.status-icon').textContent = '⏳';
         }
-    } catch (error) {
-        uploadStatus.className = 'status error';
-        uploadStatus.textContent = '✗ Error: ' + error.message;
-        uploadStatus.style.display = 'block';
-        
-        uploadBtn.disabled = false;
-        uploadText.style.display = 'inline';
-        uploadSpinner.style.display = 'none';
+    });
+
+    // Subir una por una para mostrar progreso
+    for (let i = 0; i < selectedFiles.length; i++) {
+        const formData = new FormData();
+        formData.append('fotos', selectedFiles[i]);
+        formData.append('nombre', nombre);
+        formData.append('descripcion', descripcion);
+
+        const item = document.getElementById(`preview-${i}`);
+        btnText.textContent = `Subiendo ${i + 1} de ${selectedFiles.length}...`;
+        progressFill.style.width = `${(i / selectedFiles.length) * 100}%`;
+
+        try {
+            const response = await fetch('/api/fotos/upload', { method: 'POST', body: formData });
+            const data = await response.json();
+
+            if (item) {
+                item.classList.remove('uploading');
+                if (data.success) {
+                    item.classList.add('done');
+                    item.querySelector('.status-icon').textContent = '✅';
+                    item.querySelector('.remove').style.display = 'none';
+                    subidas++;
+                } else {
+                    item.classList.add('error');
+                    item.querySelector('.status-icon').textContent = '❌';
+                }
+            }
+        } catch {
+            if (item) {
+                item.classList.remove('uploading');
+                item.classList.add('error');
+                item.querySelector('.status-icon').textContent = '❌';
+            }
+        }
+    }
+
+    progressFill.style.width = '100%';
+    setTimeout(() => { progressBar.style.display = 'none'; progressFill.style.width = '0%'; }, 800);
+
+    uploadStatus.className = subidas > 0 ? 'status success' : 'status error';
+    uploadStatus.textContent = subidas > 0
+        ? `✅ ¡${subidas} foto${subidas > 1 ? 's' : ''} subida${subidas > 1 ? 's' : ''} con éxito! ¡Gracias! 💕`
+        : '❌ No se pudo subir ninguna foto';
+    uploadStatus.style.display = 'block';
+    uploadBtn.disabled = false;
+    btnText.textContent = `✨ Subir más fotos`;
+
+    // Limpiar selección después de 3 segundos si todo fue bien
+    if (subidas === selectedFiles.length) {
+        setTimeout(() => {
+            selectedFiles = [];
+            renderPreviews();
+            uploadStatus.style.display = 'none';
+        }, 3000);
     }
 });
 </script>

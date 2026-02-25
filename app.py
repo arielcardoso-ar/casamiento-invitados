@@ -11,7 +11,7 @@ from PIL import Image
 from database import CasamientoDatabase
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB para múltiples fotos
 
 # Usar /tmp en producción (Render) o static/uploads en local
 if os.environ.get('RENDER'):
@@ -79,67 +79,80 @@ def api_get_fotos():
     fotos = db.get_fotos()
     return jsonify(fotos)
 
+def procesar_foto(file, subido_por, descripcion):
+    """Procesar y guardar una foto"""
+    filename = secure_filename(file.filename)
+    import uuid
+    nombre_archivo = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}_{filename}"
+    
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], nombre_archivo)
+    file.save(filepath)
+    
+    try:
+        img = Image.open(filepath)
+        # Convertir a RGB si es necesario (HEIC, PNG con transparencia, etc.)
+        if img.mode in ('RGBA', 'P', 'LA'):
+            img = img.convert('RGB')
+        img.thumbnail((1200, 1200), Image.Resampling.LANCZOS)
+        img.save(filepath, 'JPEG', optimize=True, quality=85)
+        
+        img.thumbnail((400, 400), Image.Resampling.LANCZOS)
+        thumbnail_path = os.path.join(app.config['UPLOAD_FOLDER'], 'thumbnails', nombre_archivo)
+        img.save(thumbnail_path, 'JPEG', optimize=True, quality=80)
+        thumbnail_rel = f"uploads/thumbnails/{nombre_archivo}"
+    except Exception as e:
+        print(f"Error procesando imagen: {e}")
+        thumbnail_rel = f"uploads/{nombre_archivo}"
+    
+    foto_id = db.agregar_foto({
+        'nombre_archivo': nombre_archivo,
+        'nombre_original': file.filename,
+        'ruta': f"uploads/{nombre_archivo}",
+        'thumbnail': thumbnail_rel,
+        'subido_por': subido_por,
+        'descripcion': descripcion
+    })
+    
+    return foto_id
+
 @app.route('/api/fotos/upload', methods=['POST'])
 def api_upload_foto():
-    """API para subir foto"""
+    """API para subir una o múltiples fotos"""
     try:
-        if 'foto' not in request.files:
-            return jsonify({'success': False, 'message': 'No se envió ninguna foto'}), 400
+        files = request.files.getlist('fotos')
         
-        file = request.files['foto']
+        if not files or all(f.filename == '' for f in files):
+            return jsonify({'success': False, 'message': 'No se enviaron fotos'}), 400
         
-        if file.filename == '':
-            return jsonify({'success': False, 'message': 'No se seleccionó ningún archivo'}), 400
+        subido_por = request.form.get('nombre', 'Invitado')
+        descripcion = request.form.get('descripcion', '')
         
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            nombre_archivo = f"{timestamp}_{filename}"
-            
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], nombre_archivo)
-            file.save(filepath)
-            
+        subidas = []
+        errores = []
+        
+        for file in files:
+            if file.filename == '':
+                continue
+            if not allowed_file(file.filename):
+                errores.append(f'{file.filename}: tipo no permitido')
+                continue
             try:
-                # Comprimir y redimensionar imagen
-                img = Image.open(filepath)
-                img.thumbnail((1200, 1200), Image.Resampling.LANCZOS)
-                img.save(filepath, optimize=True, quality=85)
-                
-                # Crear thumbnail
-                img.thumbnail((300, 300), Image.Resampling.LANCZOS)
-                thumbnail_path = os.path.join(app.config['UPLOAD_FOLDER'], 'thumbnails', nombre_archivo)
-                img.save(thumbnail_path, optimize=True, quality=80)
-                thumbnail_rel = f"uploads/thumbnails/{nombre_archivo}"
+                foto_id = procesar_foto(file, subido_por, descripcion)
+                subidas.append(foto_id)
             except Exception as e:
-                print(f"Error creando thumbnail: {e}")
-                thumbnail_rel = f"uploads/{nombre_archivo}"
-            
-            subido_por = request.form.get('nombre', 'Invitado')
-            descripcion = request.form.get('descripcion', '')
-            
-            foto_id = db.agregar_foto({
-                'nombre_archivo': nombre_archivo,
-                'nombre_original': file.filename,
-                'ruta': f"uploads/{nombre_archivo}",
-                'thumbnail': thumbnail_rel,
-                'subido_por': subido_por,
-                'descripcion': descripcion
-            })
-            
-            return jsonify({
-                'success': True,
-                'message': 'Foto subida correctamente',
-                'id': foto_id,
-                'filename': nombre_archivo
-            })
+                errores.append(f'{file.filename}: {str(e)}')
         
-        return jsonify({'success': False, 'message': 'Tipo de archivo no permitido'}), 400
+        if not subidas:
+            return jsonify({'success': False, 'message': 'No se pudo subir ninguna foto'}), 400
+        
+        msg = f'{"¡" if not errores else ""}{len(subidas)} foto{"s" if len(subidas) > 1 else ""} subida{"s" if len(subidas) > 1 else ""} correctamente'
+        return jsonify({'success': True, 'message': msg, 'subidas': len(subidas), 'errores': errores})
     
     except Exception as e:
         print(f"Error en upload: {str(e)}")
         import traceback
         traceback.print_exc()
-        return jsonify({'success': False, 'message': f'Error al subir foto: {str(e)}'}), 500
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
 
 @app.route('/uploads/<path:filename>')
 def serve_upload(filename):
