@@ -41,13 +41,13 @@ WEDDING_DATA = {
 @app.route('/')
 def index():
     """Página principal - Subir fotos"""
-    return render_template('invitados/fotos.html', wedding=WEDDING_DATA)
+    return render_template('fotos.html', wedding=WEDDING_DATA)
 
 @app.route('/galeria')
 def galeria():
     """Galería de fotos"""
     fotos = db.get_fotos()
-    return render_template('invitados/galeria.html', wedding=WEDDING_DATA, fotos=fotos)
+    return render_template('galeria.html', wedding=WEDDING_DATA, fotos=fotos)
 
 @app.route('/qr')
 def qr_code():
