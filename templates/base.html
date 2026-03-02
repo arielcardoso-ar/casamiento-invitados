@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#2d1b2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="K & A 💍">
     <title>{% block title %}{{ wedding.novia }} & {{ wedding.novio }}{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,7 +39,7 @@
         /* ── Header ── */
         .site-header {
             background: linear-gradient(160deg, #2d1b2e 0%, #5c2d4a 50%, #8b4a6a 100%);
-            padding: 2.5rem 1.5rem 2rem;
+            padding: calc(2.5rem + env(safe-area-inset-top)) 1.5rem 2rem;
             text-align: center;
             position: relative;
             overflow: hidden;
@@ -103,6 +107,7 @@
             align-items: center;
             justify-content: center;
             gap: 0.4rem;
+            min-height: 52px; /* tap target mínimo */
         }
         .nav-link:hover { color: var(--rose); background: var(--rose-light); }
         .nav-link.active {
@@ -117,7 +122,9 @@
         .container {
             max-width: 600px;
             margin: 0 auto;
-            padding: 1.5rem 1rem 3rem;
+            padding: 1.5rem 1rem calc(3rem + env(safe-area-inset-bottom));
+            padding-left:  max(1rem, env(safe-area-inset-left));
+            padding-right: max(1rem, env(safe-area-inset-right));
         }
 
         {% block styles %}{% endblock %}
