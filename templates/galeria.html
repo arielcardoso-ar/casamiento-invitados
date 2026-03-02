@@ -201,8 +201,9 @@
 {% if fotos %}
 <div class="gallery" id="gallery">
     {% for foto in fotos %}
+    {% set thumb = foto.thumbnail or foto.ruta %}
     <div class="gallery-item" onclick="openModal({{ loop.index0 }})">
-        <img src="/{{ foto.thumbnail or foto.ruta }}" alt="Foto de {{ foto.subido_por }}" loading="lazy">
+        <img src="{{ thumb if '://' in thumb else '/' + thumb }}" alt="Foto de {{ foto.subido_por }}" loading="lazy">
         <div class="item-overlay">
             <div class="item-author">{{ foto.subido_por }}</div>
             {% if foto.descripcion %}<div class="item-desc">{{ foto.descripcion }}</div>{% endif %}
@@ -238,7 +239,8 @@
 <script>
 const fotos = [
     {% for foto in fotos %}
-    { ruta: '/{{ foto.ruta }}', autor: '{{ foto.subido_por | replace("'", "\\'") }}', desc: '{{ (foto.descripcion or "") | replace("'", "\\'") }}' },
+    {% set ruta = foto.ruta %}
+    { ruta: '{{ ruta if "://" in ruta else "/" + ruta }}', autor: '{{ foto.subido_por | replace("'", "\\'") }}', desc: '{{ (foto.descripcion or "") | replace("'", "\\'") }}' },
     {% endfor %}
 ];
 
