@@ -1,66 +1,130 @@
 {% extends "base.html" %}
 
 {% block styles %}
-.stats {
-    background: rgba(255,255,255,0.2);
-    color: white;
-    padding: 0.75rem 1.25rem;
-    border-radius: 12px;
-    text-align: center;
-    margin-bottom: 1rem;
-    font-weight: 700;
-    font-size: 1rem;
+.gallery-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 0 0.75rem;
 }
+.gallery-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    font-weight: 400;
+    color: var(--text);
+}
+.photo-count {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    background: var(--rose-light);
+    padding: 0.3rem 0.75rem;
+    border-radius: 99px;
+    font-weight: 500;
+}
+
+/* Refresh btn */
+.btn-refresh {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 1rem;
+    background: var(--white);
+    color: var(--text-muted);
+    border: 1.5px solid rgba(200,120,138,.2);
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 1rem;
+    width: 100%;
+    justify-content: center;
+}
+.btn-refresh:hover { color: var(--rose-dark); border-color: var(--rose); background: var(--rose-light); }
+.btn-refresh.spinning .refresh-icon { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.refresh-icon { display: inline-block; }
+
+/* Masonry gallery */
 .gallery {
     columns: 2;
-    column-gap: 0.5rem;
+    column-gap: 0.6rem;
 }
+@media (min-width: 480px) { .gallery { columns: 3; } }
+
 .gallery-item {
     break-inside: avoid;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.6rem;
     border-radius: 12px;
     overflow: hidden;
     cursor: pointer;
     position: relative;
-    background: rgba(255,255,255,0.1);
+    background: var(--rose-light);
+    transition: transform 0.2s;
 }
+.gallery-item:active { transform: scale(0.97); }
 .gallery-item img {
     width: 100%;
     height: auto;
     display: block;
-    transition: transform 0.3s;
 }
-.gallery-item:active img { transform: scale(0.97); }
-.gallery-item .overlay {
+.gallery-item .item-overlay {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
-    padding: 0.5rem;
-    background: linear-gradient(transparent, rgba(0,0,0,0.6));
+    padding: 0.6rem 0.5rem 0.4rem;
+    background: linear-gradient(transparent, rgba(45,27,46,.65));
     color: white;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     opacity: 0;
-    transition: opacity 0.3s;
+    transition: opacity 0.25s;
 }
-.gallery-item:hover .overlay { opacity: 1; }
+.gallery-item:hover .item-overlay { opacity: 1; }
+.item-author { font-weight: 600; }
+.item-desc { opacity: 0.85; margin-top: 0.1rem; }
 
-.empty {
-    background: white;
-    border-radius: 16px;
-    padding: 3rem 2rem;
+/* Empty state */
+.empty-state {
     text-align: center;
+    padding: 3.5rem 1.5rem;
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
 }
-.empty-icon { font-size: 4rem; margin-bottom: 1rem; }
+.empty-icon { font-size: 3.5rem; margin-bottom: 1rem; }
+.empty-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+}
+.empty-sub { color: var(--text-muted); font-size: 0.9rem; }
+.btn-upload-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 1.25rem;
+    padding: 0.7rem 1.4rem;
+    background: linear-gradient(135deg, var(--rose-dark), var(--rose));
+    color: white;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+    box-shadow: 0 4px 14px rgba(168,90,110,.25);
+}
 
 /* Modal */
 .modal {
     display: none;
     position: fixed;
-    z-index: 1000;
+    z-index: 200;
     inset: 0;
-    background: rgba(0,0,0,0.95);
+    background: rgba(20,10,20,.95);
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 .modal.show { display: flex; align-items: center; justify-content: center; }
 .modal-inner {
@@ -71,92 +135,91 @@
 }
 .modal-img { width: 100%; height: auto; border-radius: 12px; display: block; }
 .modal-info {
-    background: white;
+    background: var(--white);
     border-radius: 12px;
-    padding: 1rem;
+    padding: 0.85rem 1rem;
     margin-top: 0.5rem;
 }
-.modal-info p { margin: 0.25rem 0; color: #444; font-size: 0.95rem; }
+.modal-author { font-weight: 600; color: var(--text); font-size: 0.95rem; }
+.modal-desc   { color: var(--text-muted); font-size: 0.875rem; margin-top: 0.25rem; }
+
 .modal-close {
     position: fixed;
-    top: 1rem;
-    right: 1rem;
-    width: 40px;
-    height: 40px;
-    background: rgba(255,255,255,0.2);
+    top: 0.85rem;
+    right: 0.85rem;
+    width: 38px;
+    height: 38px;
+    background: rgba(255,255,255,.15);
     color: white;
     border: none;
     border-radius: 50%;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1001;
+    z-index: 201;
+    transition: background 0.2s;
 }
-/* Nav flechas */
+.modal-close:hover { background: rgba(255,255,255,.25); }
+
 .modal-nav {
     position: fixed;
     top: 50%;
     transform: translateY(-50%);
-    background: rgba(255,255,255,0.15);
+    background: rgba(255,255,255,.12);
     color: white;
     border: none;
-    width: 44px;
-    height: 44px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
     font-size: 1.4rem;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1001;
+    z-index: 201;
+    transition: background 0.2s;
 }
+.modal-nav:hover { background: rgba(255,255,255,.22); }
 .modal-nav.prev { left: 0.5rem; }
 .modal-nav.next { right: 0.5rem; }
-
-/* Refresh btn */
-.btn-refresh {
-    display: block;
-    width: 100%;
-    padding: 0.75rem;
-    background: rgba(255,255,255,0.2);
-    color: white;
-    border: none;
-    border-radius: 10px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-bottom: 1rem;
-    font-size: 0.9rem;
-}
 {% endblock %}
 
 {% block content %}
-<div class="stats">📷 {{ fotos|length }} foto{{ 's' if fotos|length != 1 else '' }} compartida{{ 's' if fotos|length != 1 else '' }}</div>
+<div class="gallery-header">
+    <div class="gallery-title">Álbum compartido</div>
+    <span class="photo-count">
+        📷 {{ fotos|length }} foto{{ 's' if fotos|length != 1 else '' }}
+    </span>
+</div>
 
-<button class="btn-refresh" onclick="location.reload()">🔄 Actualizar galería</button>
+<button class="btn-refresh" id="refreshBtn" onclick="refreshGallery()">
+    <span class="refresh-icon">↻</span> Actualizar
+</button>
 
 {% if fotos %}
 <div class="gallery" id="gallery">
     {% for foto in fotos %}
     <div class="gallery-item" onclick="openModal({{ loop.index0 }})">
-        <img src="/{{ foto.thumbnail or foto.ruta }}" alt="Foto" loading="lazy">
-        <div class="overlay">
-            <strong>{{ foto.subido_por }}</strong>
-            {% if foto.descripcion %} · {{ foto.descripcion }}{% endif %}
+        <img src="/{{ foto.thumbnail or foto.ruta }}" alt="Foto de {{ foto.subido_por }}" loading="lazy">
+        <div class="item-overlay">
+            <div class="item-author">{{ foto.subido_por }}</div>
+            {% if foto.descripcion %}<div class="item-desc">{{ foto.descripcion }}</div>{% endif %}
         </div>
     </div>
     {% endfor %}
 </div>
 {% else %}
-<div class="empty">
-    <div class="empty-icon">📷</div>
-    <h3 style="color:#333; margin-bottom:0.5rem;">Todavía no hay fotos</h3>
-    <p style="color:#666;">¡Sé el primero en compartir!</p>
+<div class="empty-state">
+    <div class="empty-icon">🌸</div>
+    <div class="empty-title">Todavía no hay fotos</div>
+    <p class="empty-sub">¡Sé el primero en compartir un momento!</p>
+    <a href="/" class="btn-upload-cta">📷 Subir fotos</a>
 </div>
 {% endif %}
 
-<!-- Modal -->
+<!-- Modal lightbox -->
 <div class="modal" id="modal" onclick="handleModalClick(event)">
     <button class="modal-close" onclick="closeModal()">✕</button>
     <button class="modal-nav prev" onclick="navigate(-1); event.stopPropagation()">‹</button>
@@ -164,8 +227,8 @@
     <div class="modal-inner" onclick="event.stopPropagation()">
         <img id="modalImg" class="modal-img" src="" alt="Foto">
         <div class="modal-info">
-            <p>👤 <strong id="modalAuthor"></strong></p>
-            <p id="modalDesc" style="display:none"></p>
+            <div class="modal-author" id="modalAuthor"></div>
+            <div class="modal-desc" id="modalDesc" style="display:none"></div>
         </div>
     </div>
 </div>
@@ -175,7 +238,7 @@
 <script>
 const fotos = [
     {% for foto in fotos %}
-    { ruta: '/{{ foto.ruta }}', autor: '{{ foto.subido_por }}', desc: '{{ foto.descripcion or "" }}' },
+    { ruta: '/{{ foto.ruta }}', autor: '{{ foto.subido_por | replace("'", "\\'") }}', desc: '{{ (foto.descripcion or "") | replace("'", "\\'") }}' },
     {% endfor %}
 ];
 
@@ -191,14 +254,10 @@ function openModal(idx) {
 function renderModal() {
     const f = fotos[currentIdx];
     document.getElementById('modalImg').src = f.ruta;
-    document.getElementById('modalAuthor').textContent = f.autor;
+    document.getElementById('modalAuthor').textContent = '👤 ' + f.autor;
     const desc = document.getElementById('modalDesc');
-    if (f.desc) {
-        desc.textContent = '💬 ' + f.desc;
-        desc.style.display = 'block';
-    } else {
-        desc.style.display = 'none';
-    }
+    if (f.desc) { desc.textContent = '💬 ' + f.desc; desc.style.display = 'block'; }
+    else { desc.style.display = 'none'; }
 }
 
 function navigate(dir) {
@@ -217,17 +276,22 @@ function handleModalClick(e) {
 
 document.addEventListener('keydown', e => {
     if (!document.getElementById('modal').classList.contains('show')) return;
-    if (e.key === 'Escape') closeModal();
-    if (e.key === 'ArrowLeft') navigate(-1);
-    if (e.key === 'ArrowRight') navigate(1);
+    if (e.key === 'Escape')      closeModal();
+    if (e.key === 'ArrowLeft')   navigate(-1);
+    if (e.key === 'ArrowRight')  navigate(1);
 });
 
-// Swipe en mobile
 let touchStartX = 0;
 document.getElementById('modal').addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
-document.getElementById('modal').addEventListener('touchend', e => {
+document.getElementById('modal').addEventListener('touchend',   e => {
     const diff = touchStartX - e.changedTouches[0].clientX;
     if (Math.abs(diff) > 50) navigate(diff > 0 ? 1 : -1);
 });
+
+function refreshGallery() {
+    const btn = document.getElementById('refreshBtn');
+    btn.classList.add('spinning');
+    setTimeout(() => location.reload(), 300);
+}
 </script>
 {% endblock %}

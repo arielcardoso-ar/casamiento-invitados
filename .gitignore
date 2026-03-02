@@ -8,6 +8,7 @@ env/
 ENV/
 *.db
 *.log
+static/uploads/
 .DS_Store
 .env
 *.swp

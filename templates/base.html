@@ -2,62 +2,151 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% block title %}{{ wedding.novia }} & {{ wedding.novio }}{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --rose:      #c8788a;
+            --rose-dark: #a85a6e;
+            --rose-light:#f5e6ea;
+            --gold:      #c9a96e;
+            --gold-light:#f7f0e3;
+            --cream:     #fdf8f5;
+            --text:      #3a2e35;
+            --text-muted:#8a7a82;
+            --white:     #ffffff;
+            --radius:    16px;
+            --shadow:    0 4px 24px rgba(58,46,53,.10);
+            --shadow-lg: 0 8px 40px rgba(58,46,53,.16);
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--cream);
             min-height: 100vh;
-            padding: 1rem;
+            color: var(--text);
         }
-        .container { max-width: 600px; margin: 0 auto; }
-        .header {
+
+        /* ── Header ── */
+        .site-header {
+            background: linear-gradient(160deg, #2d1b2e 0%, #5c2d4a 50%, #8b4a6a 100%);
+            padding: 2.5rem 1.5rem 2rem;
             text-align: center;
-            color: white;
-            padding: 2rem 1rem;
+            position: relative;
+            overflow: hidden;
         }
-        .header h1 { font-size: 2rem; margin-bottom: 0.5rem; }
-        .header p { opacity: 0.9; }
-        .nav {
+        .site-header::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        .header-couple {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.2rem;
+            font-weight: 400;
+            color: var(--white);
+            letter-spacing: 0.02em;
+            margin-bottom: 0.35rem;
+            position: relative;
+        }
+        .header-couple span {
+            font-style: italic;
+            color: #f0c8d0;
+        }
+        .header-amp {
+            font-weight: 300;
+            opacity: 0.7;
+            margin: 0 0.3em;
+        }
+        .header-date {
+            font-size: 0.875rem;
+            color: rgba(255,255,255,0.65);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            font-weight: 300;
+        }
+        .header-divider {
+            width: 40px;
+            height: 1px;
+            background: rgba(255,255,255,0.3);
+            margin: 0.75rem auto;
+        }
+
+        /* ── Nav ── */
+        .site-nav {
             display: flex;
-            gap: 0.5rem;
-            margin: 1rem 0;
+            gap: 0;
+            background: var(--white);
+            border-bottom: 1px solid rgba(200,120,138,.15);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 12px rgba(58,46,53,.06);
         }
-        .nav a {
+        .nav-link {
             flex: 1;
-            padding: 0.75rem;
-            background: rgba(255,255,255,0.2);
-            color: white;
+            padding: 0.9rem 0.5rem;
+            color: var(--text-muted);
             text-decoration: none;
             text-align: center;
-            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            border-bottom: 3px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+        }
+        .nav-link:hover { color: var(--rose); background: var(--rose-light); }
+        .nav-link.active {
+            color: var(--rose);
+            border-bottom-color: var(--rose);
+            background: var(--rose-light);
             font-weight: 600;
-            transition: all 0.3s;
         }
-        .nav a:hover, .nav a.active {
-            background: rgba(255,255,255,0.3);
+        .nav-icon { font-size: 1.1rem; }
+
+        /* ── Container ── */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1.5rem 1rem 3rem;
         }
+
         {% block styles %}{% endblock %}
     </style>
 </head>
 <body>
+    <div class="site-header">
+        <div class="header-couple">
+            <span>{{ wedding.novia }}</span>
+            <span class="header-amp">&</span>
+            <span>{{ wedding.novio }}</span>
+        </div>
+        <div class="header-divider"></div>
+        <div class="header-date">{{ wedding.fecha }}</div>
+    </div>
+
+    <nav class="site-nav">
+        <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">
+            <span class="nav-icon">📷</span> Subir
+        </a>
+        <a href="/galeria" class="nav-link {% if request.path == '/galeria' %}active{% endif %}">
+            <span class="nav-icon">🖼️</span> Galería
+        </a>
+    </nav>
+
     <div class="container">
-        <div class="header">
-            <h1>💍 {{ wedding.novia }} & {{ wedding.novio }}</h1>
-            <p>{{ wedding.fecha }}</p>
-        </div>
-        
-        <div class="nav">
-            <a href="/" class="{% if request.path == '/' %}active{% endif %}">📸 Subir</a>
-            <a href="/galeria" class="{% if request.path == '/galeria' %}active{% endif %}">🖼️ Galería</a>
-            <a href="/qr-page" class="{% if request.path == '/qr-page' %}active{% endif %}">📱 QR</a>
-        </div>
-        
         {% block content %}{% endblock %}
     </div>
-    
+
     {% block scripts %}{% endblock %}
 </body>
 </html>

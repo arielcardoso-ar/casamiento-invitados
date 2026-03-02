@@ -1,27 +1,45 @@
 {% extends "base.html" %}
 
 {% block styles %}
-.card {
-    background: white;
-    border-radius: 20px;
-    padding: 1.5rem;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+.page-intro {
+    text-align: center;
+    padding: 1.5rem 0 1rem;
+}
+.page-intro h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 400;
+    color: var(--text);
+    margin-bottom: 0.4rem;
+}
+.page-intro p {
+    font-size: 0.9rem;
+    color: var(--text-muted);
 }
 
-/* Zona de drop */
+/* ── Upload card ── */
+.upload-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(200,120,138,.1);
+}
+
+/* Drop zone */
 .drop-zone {
-    border: 3px dashed #c084fc;
-    border-radius: 16px;
+    border: 2px dashed rgba(200,120,138,.4);
+    border-radius: 12px;
     padding: 2.5rem 1rem;
     text-align: center;
     cursor: pointer;
-    transition: all 0.3s;
-    background: #faf5ff;
+    transition: all 0.25s;
+    background: var(--rose-light);
     position: relative;
 }
-.drop-zone.dragover {
-    border-color: #7c3aed;
-    background: #ede9fe;
+.drop-zone:hover, .drop-zone.dragover {
+    border-color: var(--rose);
+    background: #f5dde3;
     transform: scale(1.01);
 }
 .drop-zone input[type="file"] {
@@ -32,32 +50,40 @@
     width: 100%;
     height: 100%;
 }
-.drop-icon { font-size: 3.5rem; margin-bottom: 0.5rem; }
-.drop-text { font-size: 1.2rem; font-weight: 700; color: #7c3aed; }
-.drop-hint { font-size: 0.9rem; color: #9ca3af; margin-top: 0.5rem; }
+.drop-icon { font-size: 3rem; margin-bottom: 0.6rem; line-height: 1; }
+.drop-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.15rem;
+    color: var(--rose-dark);
+    margin-bottom: 0.35rem;
+}
+.drop-hint { font-size: 0.85rem; color: var(--text-muted); }
 
 /* Preview grid */
-.preview-section { display: none; margin-top: 1.5rem; }
+.preview-section { display: none; margin-top: 1.25rem; }
 .preview-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
 }
 .preview-count {
-    font-weight: 700;
-    color: #7c3aed;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--rose-dark);
 }
 .btn-clear {
-    padding: 0.4rem 1rem;
+    padding: 0.3rem 0.9rem;
     background: #fee2e2;
     color: #dc2626;
     border: none;
     border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
+    transition: background 0.2s;
 }
+.btn-clear:hover { background: #fecaca; }
 .preview-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -68,6 +94,7 @@
     border-radius: 10px;
     overflow: hidden;
     position: relative;
+    background: var(--rose-light);
 }
 .preview-item img {
     width: 100%;
@@ -78,127 +105,164 @@
     position: absolute;
     top: 4px;
     right: 4px;
-    width: 24px;
-    height: 24px;
-    background: rgba(0,0,0,0.6);
+    width: 22px;
+    height: 22px;
+    background: rgba(0,0,0,0.55);
     color: white;
     border: none;
     border-radius: 50%;
-    font-size: 14px;
+    font-size: 12px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    line-height: 1;
 }
 .preview-item .status-icon {
     position: absolute;
     inset: 0;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
-    font-size: 2rem;
-    background: rgba(0,0,0,0.4);
-    display: none;
+    font-size: 1.8rem;
+    background: rgba(0,0,0,0.35);
 }
 .preview-item.uploading .status-icon { display: flex; }
-.preview-item.done .status-icon { display: flex; background: rgba(34,197,94,0.6); }
-.preview-item.error .status-icon { display: flex; background: rgba(239,68,68,0.5); }
+.preview-item.done .status-icon    { display: flex; background: rgba(34,197,94,0.55); }
+.preview-item.error .status-icon   { display: flex; background: rgba(239,68,68,0.45); }
 
-/* Campos opcionales */
-.optional-section { margin-top: 1.5rem; }
-.section-label {
-    font-size: 0.85rem;
+/* Optional fields */
+.optional-section { margin-top: 1.25rem; display: none; }
+.field-label {
+    font-size: 0.75rem;
     font-weight: 600;
-    color: #9ca3af;
+    color: var(--text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.75rem;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.6rem;
 }
 .input-field {
     width: 100%;
-    padding: 0.875rem 1rem;
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
-    font-size: 1rem;
+    padding: 0.8rem 1rem;
+    border: 1.5px solid rgba(200,120,138,.25);
+    border-radius: 10px;
+    font-size: 0.975rem;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--cream);
     margin-bottom: 0.75rem;
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
 }
 .input-field:focus {
     outline: none;
-    border-color: #7c3aed;
+    border-color: var(--rose);
+    box-shadow: 0 0 0 3px rgba(200,120,138,.12);
+    background: var(--white);
 }
 
-/* Botón de subir */
+/* Upload button */
 .btn-upload {
     width: 100%;
-    padding: 1.1rem;
-    background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+    padding: 1rem;
+    background: linear-gradient(135deg, var(--rose-dark) 0%, var(--rose) 100%);
     color: white;
     border: none;
-    border-radius: 14px;
-    font-size: 1.2rem;
-    font-weight: 700;
+    border-radius: 12px;
+    font-size: 1.05rem;
+    font-weight: 600;
+    font-family: inherit;
     cursor: pointer;
-    transition: all 0.3s;
-    margin-top: 1rem;
+    transition: all 0.25s;
+    margin-top: 0.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
+    letter-spacing: 0.02em;
+    box-shadow: 0 4px 16px rgba(168,90,110,.3);
 }
-.btn-upload:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-.btn-upload:active:not(:disabled) {
-    transform: scale(0.98);
-}
+.btn-upload:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: none; }
+.btn-upload:active:not(:disabled) { transform: scale(0.98); }
 
-/* Progress bar */
+/* Progress */
 .progress-bar {
-    height: 6px;
-    background: #e5e7eb;
+    height: 5px;
+    background: var(--rose-light);
     border-radius: 99px;
-    margin-top: 1rem;
+    margin-top: 0.75rem;
     overflow: hidden;
     display: none;
 }
 .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #7c3aed, #a855f7);
+    background: linear-gradient(90deg, var(--rose-dark), var(--rose));
     border-radius: 99px;
     transition: width 0.3s;
     width: 0%;
 }
 
 /* Status */
-.status {
+.status-msg {
     margin-top: 1rem;
     padding: 1rem;
     border-radius: 12px;
     text-align: center;
     font-weight: 600;
     display: none;
-    font-size: 1.1rem;
+    font-size: 0.975rem;
 }
-.status.success { background: #dcfce7; color: #166534; }
-.status.error { background: #fee2e2; color: #991b1b; }
+.status-msg.success {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+.status-msg.error {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+/* Gallery shortcut */
+.gallery-cta {
+    text-align: center;
+    margin-top: 1.5rem;
+}
+.btn-gallery {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.65rem 1.4rem;
+    background: var(--white);
+    color: var(--rose-dark);
+    border: 1.5px solid rgba(200,120,138,.35);
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+.btn-gallery:hover {
+    background: var(--rose-light);
+    border-color: var(--rose);
+}
 {% endblock %}
 
 {% block content %}
-<div class="card">
+<div class="page-intro">
+    <h2>Compartí tus fotos</h2>
+    <p>Subí los momentos que quieras guardar de este día</p>
+</div>
+
+<div class="upload-card">
     <form id="uploadForm" enctype="multipart/form-data">
 
-        <!-- Zona de selección -->
         <div class="drop-zone" id="dropZone">
-            <input type="file" id="fotos" name="fotos" accept="image/*;capture" multiple>
-            <div class="drop-icon">📷</div>
+            <input type="file" id="fotos" name="fotos" accept="image/*" multiple>
+            <div class="drop-icon">🌸</div>
             <div class="drop-text">Tocá para elegir fotos</div>
             <div class="drop-hint">Podés seleccionar varias a la vez</div>
         </div>
 
-        <!-- Preview de fotos seleccionadas -->
         <div class="preview-section" id="previewSection">
             <div class="preview-header">
                 <span class="preview-count" id="previewCount"></span>
@@ -207,23 +271,26 @@
             <div class="preview-grid" id="previewGrid"></div>
         </div>
 
-        <!-- Campos opcionales -->
-        <div class="optional-section" id="optionalSection" style="display:none">
-            <div class="section-label">Opcional</div>
+        <div class="optional-section" id="optionalSection">
+            <div class="field-label">Opcional</div>
             <input type="text" class="input-field" id="nombre" name="nombre" placeholder="👤 Tu nombre">
-            <input type="text" class="input-field" id="descripcion" name="descripcion" placeholder="💬 Descripción">
+            <input type="text" class="input-field" id="descripcion" name="descripcion" placeholder="💬 Un mensaje o descripción">
 
             <div class="progress-bar" id="progressBar">
                 <div class="progress-fill" id="progressFill"></div>
             </div>
 
             <button type="submit" class="btn-upload" id="uploadBtn">
-                <span id="btnText">✨ Subir Fotos</span>
+                <span id="btnText">✨ Subir fotos</span>
             </button>
         </div>
     </form>
 
-    <div id="uploadStatus" class="status"></div>
+    <div id="uploadStatus" class="status-msg"></div>
+</div>
+
+<div class="gallery-cta">
+    <a href="/galeria" class="btn-gallery">🖼️ Ver la galería</a>
 </div>
 {% endblock %}
 
@@ -231,22 +298,20 @@
 <script>
 let selectedFiles = [];
 
-const dropZone = document.getElementById('dropZone');
-const fotosInput = document.getElementById('fotos');
+const dropZone       = document.getElementById('dropZone');
+const fotosInput     = document.getElementById('fotos');
 const previewSection = document.getElementById('previewSection');
-const previewGrid = document.getElementById('previewGrid');
-const previewCount = document.getElementById('previewCount');
-const optionalSection = document.getElementById('optionalSection');
-const uploadStatus = document.getElementById('uploadStatus');
+const previewGrid    = document.getElementById('previewGrid');
+const previewCount   = document.getElementById('previewCount');
+const optionalSection= document.getElementById('optionalSection');
+const uploadStatus   = document.getElementById('uploadStatus');
 
-// Selección de fotos
 fotosInput.addEventListener('change', function(e) {
     addFiles(Array.from(e.target.files));
     e.target.value = '';
 });
 
-// Drag & drop (desktop)
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragover'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
 dropZone.addEventListener('drop', e => {
     e.preventDefault();
@@ -256,9 +321,8 @@ dropZone.addEventListener('drop', e => {
 
 function addFiles(files) {
     files.forEach(file => {
-        if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
+        if (!selectedFiles.find(f => f.name === file.name && f.size === file.size))
             selectedFiles.push(file);
-        }
     });
     renderPreviews();
 }
@@ -269,7 +333,6 @@ function renderPreviews() {
         optionalSection.style.display = 'none';
         return;
     }
-
     previewSection.style.display = 'block';
     optionalSection.style.display = 'block';
     previewCount.textContent = `${selectedFiles.length} foto${selectedFiles.length > 1 ? 's' : ''} seleccionada${selectedFiles.length > 1 ? 's' : ''}`;
@@ -298,8 +361,8 @@ function renderPreviews() {
         previewGrid.appendChild(item);
     });
 
-    const btnText = document.getElementById('btnText');
-    btnText.textContent = `✨ Subir ${selectedFiles.length} Foto${selectedFiles.length > 1 ? 's' : ''}`;
+    document.getElementById('btnText').textContent =
+        `✨ Subir ${selectedFiles.length} foto${selectedFiles.length > 1 ? 's' : ''}`;
 }
 
 function removeFile(index) {
@@ -313,35 +376,28 @@ function clearAll() {
     uploadStatus.style.display = 'none';
 }
 
-// Upload
 document.getElementById('uploadForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-
     if (selectedFiles.length === 0) return;
 
-    const uploadBtn = document.getElementById('uploadBtn');
-    const btnText = document.getElementById('btnText');
+    const uploadBtn   = document.getElementById('uploadBtn');
+    const btnText     = document.getElementById('btnText');
     const progressBar = document.getElementById('progressBar');
-    const progressFill = document.getElementById('progressFill');
+    const progressFill= document.getElementById('progressFill');
 
     uploadBtn.disabled = true;
     progressBar.style.display = 'block';
     uploadStatus.style.display = 'none';
 
-    const nombre = document.getElementById('nombre').value;
-    const descripcion = document.getElementById('descripcion').value;
+    const nombre     = document.getElementById('nombre').value;
+    const descripcion= document.getElementById('descripcion').value;
     let subidas = 0;
 
-    // Marcar todas como uploading
     selectedFiles.forEach((_, i) => {
         const item = document.getElementById(`preview-${i}`);
-        if (item) {
-            item.classList.add('uploading');
-            item.querySelector('.status-icon').textContent = '⏳';
-        }
+        if (item) { item.classList.add('uploading'); item.querySelector('.status-icon').textContent = '⏳'; }
     });
 
-    // Subir una por una para mostrar progreso
     for (let i = 0; i < selectedFiles.length; i++) {
         const formData = new FormData();
         formData.append('fotos', selectedFiles[i]);
@@ -349,13 +405,12 @@ document.getElementById('uploadForm').addEventListener('submit', async function(
         formData.append('descripcion', descripcion);
 
         const item = document.getElementById(`preview-${i}`);
-        btnText.textContent = `Subiendo ${i + 1} de ${selectedFiles.length}...`;
+        btnText.textContent = `Subiendo ${i + 1} de ${selectedFiles.length}…`;
         progressFill.style.width = `${(i / selectedFiles.length) * 100}%`;
 
         try {
             const response = await fetch('/api/fotos/upload', { method: 'POST', body: formData });
             const data = await response.json();
-
             if (item) {
                 item.classList.remove('uploading');
                 if (data.success) {
@@ -380,15 +435,14 @@ document.getElementById('uploadForm').addEventListener('submit', async function(
     progressFill.style.width = '100%';
     setTimeout(() => { progressBar.style.display = 'none'; progressFill.style.width = '0%'; }, 800);
 
-    uploadStatus.className = subidas > 0 ? 'status success' : 'status error';
+    uploadStatus.className = subidas > 0 ? 'status-msg success' : 'status-msg error';
     uploadStatus.textContent = subidas > 0
         ? `✅ ¡${subidas} foto${subidas > 1 ? 's' : ''} subida${subidas > 1 ? 's' : ''} con éxito! ¡Gracias! 💕`
         : '❌ No se pudo subir ninguna foto';
     uploadStatus.style.display = 'block';
     uploadBtn.disabled = false;
-    btnText.textContent = `✨ Subir más fotos`;
+    btnText.textContent = '✨ Subir más fotos';
 
-    // Limpiar selección después de 3 segundos si todo fue bien
     if (subidas === selectedFiles.length) {
         setTimeout(() => {
             selectedFiles = [];
