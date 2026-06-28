@@ -49,8 +49,8 @@
 
   /* ============ TOP NAV (sobre el hero) ============ */
   .top-nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:flex-end;gap:6px;padding:max(12px,env(safe-area-inset-top)) 16px 10px;}
-  .top-nav a{font-family:'Cormorant',serif;font-size:.7rem;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.85);background:rgba(0,0,0,.28);backdrop-filter:blur(8px);padding:7px 14px;border-radius:20px;text-decoration:none;transition:background .25s,color .25s;border:1px solid rgba(255,255,255,.15);}
-  .top-nav a:hover{background:rgba(0,0,0,.48);color:#fff;}
+  .top-nav a{font-family:'Cormorant',serif;font-size:.7rem;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.9);background:rgba(30,42,22,.55);padding:7px 14px;border-radius:20px;text-decoration:none;transition:background .25s,color .25s;border:1px solid rgba(255,255,255,.18);}
+  .top-nav a:hover{background:rgba(30,42,22,.8);color:#fff;}
 
   .petals{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden;}
   .petal{position:absolute;top:-40px;animation:fall linear infinite;}
@@ -286,12 +286,24 @@
     v.style.transform=`${v.classList.contains('hv-tr')||v.classList.contains('hv-br')?'scaleX(-1) ':''}${v.classList.contains('hv-bl')||v.classList.contains('hv-br')?'scaleY(-1) ':''}`;
   });});
 
-  // floating petals
+  // scroll parallax en el hero
+  const heroPhoto=document.querySelector('.hero-photo');
+  window.addEventListener('scroll',()=>{
+    const s=window.pageYOffset;
+    if(s<window.innerHeight){
+      heroPhoto.style.transform=`scale(1.1) translateY(${s*0.35}px)`;
+    }
+  },{passive:true});
+
+  // floating petals — delay negativo para que aparezcan de inmediato
   const layer=document.getElementById('petals');
   const cols=['#d4b878','#c9a26b','#8a9b6e','#c08679','#9caf6a'];
-  for(let i=0;i<16;i++){const p=document.createElement('div');p.className='petal';const s=8+Math.random()*11;
-    p.style.left=Math.random()*100+'vw';p.style.animationDuration=(11+Math.random()*13)+'s';p.style.animationDelay=(Math.random()*14)+'s';
-    p.innerHTML=`<svg width="${s}" height="${s*1.5}" viewBox="0 0 12 18" fill="none"><path d="M6 0 C10 5 11 12 6 18 C1 12 2 5 6 0Z" fill="${cols[i%cols.length]}" opacity="0.7"/></svg>`;
+  for(let i=0;i<18;i++){const p=document.createElement('div');p.className='petal';const s=7+Math.random()*12;
+    const dur=10+Math.random()*14;
+    p.style.left=Math.random()*100+'vw';
+    p.style.animationDuration=dur+'s';
+    p.style.animationDelay=-(Math.random()*dur)+'s';  // empieza a mitad de la animación
+    p.innerHTML=`<svg width="${s}" height="${s*1.5}" viewBox="0 0 12 18" fill="none"><path d="M6 0 C10 5 11 12 6 18 C1 12 2 5 6 0Z" fill="${cols[i%cols.length]}" opacity="0.72"/></svg>`;
     layer.appendChild(p);}
 </script>
 </body>
