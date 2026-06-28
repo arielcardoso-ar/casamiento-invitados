@@ -62,6 +62,11 @@ def _thumbnail_url(cloudinary_url: str) -> str:
 
 @app.route('/')
 def index():
+    return render_template('invitacion.html')
+
+
+@app.route('/fotos')
+def fotos():
     return render_template('fotos.html', wedding=WEDDING_DATA)
 
 
