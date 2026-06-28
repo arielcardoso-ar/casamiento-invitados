@@ -23,23 +23,23 @@
     border-radius: var(--radius);
     padding: 1.5rem;
     box-shadow: var(--shadow);
-    border: 1px solid rgba(200,120,138,.1);
+    border: 1px solid rgba(78,98,66,.1);
 }
 
 /* Drop zone */
 .drop-zone {
-    border: 2px dashed rgba(200,120,138,.4);
+    border: 2px dashed rgba(78,98,66,.4);
     border-radius: 12px;
     padding: 2.5rem 1rem;
     text-align: center;
     cursor: pointer;
     transition: all 0.25s;
-    background: var(--rose-light);
+    background: var(--cream-2);
     position: relative;
 }
 .drop-zone:hover, .drop-zone.dragover {
-    border-color: var(--rose);
-    background: #f5dde3;
+    border-color: var(--green);
+    background: #dfe1c9;
     transform: scale(1.01);
 }
 .drop-zone input[type="file"] {
@@ -54,7 +54,7 @@
 .drop-text {
     font-family: 'Playfair Display', serif;
     font-size: 1.15rem;
-    color: var(--rose-dark);
+    color: var(--green-d);
     margin-bottom: 0.35rem;
 }
 .drop-hint { font-size: 0.85rem; color: var(--text-muted); }
@@ -70,7 +70,7 @@
 .preview-count {
     font-weight: 600;
     font-size: 0.9rem;
-    color: var(--rose-dark);
+    color: var(--green-d);
 }
 .btn-clear {
     padding: 0.3rem 0.9rem;
@@ -94,7 +94,7 @@
     border-radius: 10px;
     overflow: hidden;
     position: relative;
-    background: var(--rose-light);
+    background: var(--cream-2);
 }
 .preview-item img {
     width: 100%;
@@ -143,7 +143,7 @@
 .input-field {
     width: 100%;
     padding: 0.8rem 1rem;
-    border: 1.5px solid rgba(200,120,138,.25);
+    border: 1.5px solid rgba(78,98,66,.25);
     border-radius: 10px;
     font-size: 0.975rem;
     font-family: inherit;
@@ -155,8 +155,8 @@
 }
 .input-field:focus {
     outline: none;
-    border-color: var(--rose);
-    box-shadow: 0 0 0 3px rgba(200,120,138,.12);
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(78,98,66,.12);
     background: var(--white);
 }
 
@@ -164,7 +164,7 @@
 .btn-upload {
     width: 100%;
     padding: 1rem;
-    background: linear-gradient(135deg, var(--rose-dark) 0%, var(--rose) 100%);
+    background: linear-gradient(135deg, var(--green-d) 0%, var(--green) 100%);
     color: white;
     border: none;
     border-radius: 12px;
@@ -179,7 +179,7 @@
     justify-content: center;
     gap: 0.5rem;
     letter-spacing: 0.02em;
-    box-shadow: 0 4px 16px rgba(168,90,110,.3);
+    box-shadow: 0 4px 16px rgba(54,69,46,.3);
 }
 .btn-upload:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: none; }
 .btn-upload:active:not(:disabled) { transform: scale(0.98); }
@@ -187,7 +187,7 @@
 /* Progress */
 .progress-bar {
     height: 5px;
-    background: var(--rose-light);
+    background: var(--cream-2);
     border-radius: 99px;
     margin-top: 0.75rem;
     overflow: hidden;
@@ -195,7 +195,7 @@
 }
 .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--rose-dark), var(--rose));
+    background: linear-gradient(90deg, var(--green-d), var(--green));
     border-radius: 99px;
     transition: width 0.3s;
     width: 0%;
@@ -233,8 +233,8 @@
     gap: 0.4rem;
     padding: 0.65rem 1.4rem;
     background: var(--white);
-    color: var(--rose-dark);
-    border: 1.5px solid rgba(200,120,138,.35);
+    color: var(--green-d);
+    border: 1.5px solid rgba(78,98,66,.35);
     border-radius: 10px;
     font-weight: 600;
     font-size: 0.9rem;
@@ -242,8 +242,8 @@
     transition: all 0.2s;
 }
 .btn-gallery:hover {
-    background: var(--rose-light);
-    border-color: var(--rose);
+    background: var(--cream-2);
+    border-color: var(--green);
 }
 {% endblock %}
 

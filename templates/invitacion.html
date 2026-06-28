@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kathy & Ariel</title>
+<title>Kathy & Ariel — 19 · 12 · 2026</title>
 <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Pinyon+Script&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Cormorant:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -46,6 +46,11 @@
   .cue{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);z-index:3;font-family:'Cormorant',serif;font-size:0.66rem;letter-spacing:4px;text-transform:uppercase;color:#f0e6cf;text-decoration:none;opacity:0.9;}
   .cue .arr{display:block;font-size:1.2rem;margin-top:6px;animation:bob 1.8s ease-in-out infinite;}
   @keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(7px);}}
+
+  /* ============ TOP NAV (sobre el hero) ============ */
+  .top-nav{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:flex-end;gap:6px;padding:max(12px,env(safe-area-inset-top)) 16px 10px;}
+  .top-nav a{font-family:'Cormorant',serif;font-size:.7rem;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.85);background:rgba(0,0,0,.28);backdrop-filter:blur(8px);padding:7px 14px;border-radius:20px;text-decoration:none;transition:background .25s,color .25s;border:1px solid rgba(255,255,255,.15);}
+  .top-nav a:hover{background:rgba(0,0,0,.48);color:#fff;}
 
   .petals{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden;}
   .petal{position:absolute;top:-40px;animation:fall linear infinite;}
@@ -126,6 +131,11 @@
 </head>
 <body>
 
+  <nav class="top-nav">
+    <a href="/fotos">📷 Fotos</a>
+    <a href="/galeria">🖼️ Galería</a>
+  </nav>
+
   <div class="petals" id="petals"></div>
 
   <!-- ============ HERO ============ -->
@@ -161,7 +171,7 @@
     <div class="hero-inner">
       <p class="eyebrow">Nos Casamos</p>
       <div class="hero-names"><span class="n">Kathy</span><span class="amp">&amp;</span><span class="n">Ariel</span></div>
-      <p class="hero-date">[DD] · [Mes] · [Año]</p>
+      <p class="hero-date">19 · Diciembre · 2026</p>
     </div>
     <a href="#cuenta" class="cue">Deslizá<span class="arr">⌄</span></a>
   </header>
@@ -209,17 +219,16 @@
     <div class="cards">
       <div class="card reveal">
         <div class="fl"><svg width="32" height="32" viewBox="0 0 32 32" fill="none"><path d="M16 29 V7" stroke="#4e6242" stroke-width="1.4"/><g transform="translate(16,7)"><circle r="5" fill="#c9a26b"/><g fill="#e9d4a6"><ellipse cx="0" cy="-7" rx="3.4" ry="5.6"/><ellipse cx="6.6" cy="-2" rx="3.4" ry="5.6" transform="rotate(72 6.6 -2)"/><ellipse cx="4" cy="6" rx="3.4" ry="5.6" transform="rotate(144 4 6)"/><ellipse cx="-4" cy="6" rx="3.4" ry="5.6" transform="rotate(216 -4 6)"/><ellipse cx="-6.6" cy="-2" rx="3.4" ry="5.6" transform="rotate(288 -6.6 -2)"/></g></g><ellipse cx="9" cy="18" rx="5" ry="3" fill="#8a9b6e" transform="rotate(-25 9 18)"/><ellipse cx="23" cy="18" rx="5" ry="3" fill="#8a9b6e" transform="rotate(25 23 18)"/></svg></div>
-        <div class="lab">Fecha</div><div class="big">[DD] de [Mes]</div><div class="small">[HH:MM] hs</div>
+        <div class="lab">Fecha</div><div class="big">19 de Diciembre</div><div class="small">2026</div>
       </div>
       <div class="card reveal d1">
         <div class="fl"><svg width="32" height="32" viewBox="0 0 32 32" fill="none"><path d="M16 29 V7" stroke="#4e6242" stroke-width="1.4"/><g transform="translate(16,7)"><circle r="5" fill="#c9a26b"/><g fill="#e9d4a6"><ellipse cx="0" cy="-7" rx="3.4" ry="5.6"/><ellipse cx="6.6" cy="-2" rx="3.4" ry="5.6" transform="rotate(72 6.6 -2)"/><ellipse cx="4" cy="6" rx="3.4" ry="5.6" transform="rotate(144 4 6)"/><ellipse cx="-4" cy="6" rx="3.4" ry="5.6" transform="rotate(216 -4 6)"/><ellipse cx="-6.6" cy="-2" rx="3.4" ry="5.6" transform="rotate(288 -6.6 -2)"/></g></g><ellipse cx="9" cy="18" rx="5" ry="3" fill="#8a9b6e" transform="rotate(-25 9 18)"/><ellipse cx="23" cy="18" rx="5" ry="3" fill="#8a9b6e" transform="rotate(25 23 18)"/></svg></div>
-        <div class="lab">Ceremonia</div><div class="big">[Lugar]</div><div class="small">[Ciudad]</div>
-        <a href="[Maps]" target="_blank">Ver mapa</a>
+        <div class="lab">Ceremonia</div><div class="big">Basílica de Lourdes</div><div class="small">Santos Lugares, Buenos Aires</div>
+        <a href="https://maps.google.com/maps?q=Basílica+Nuestra+Señora+de+Lourdes,+Av.+La+Plata+3757,+Santos+Lugares" target="_blank">Ver mapa</a>
       </div>
       <div class="card reveal d2">
         <div class="fl"><svg width="32" height="32" viewBox="0 0 32 32" fill="none"><path d="M16 29 V7" stroke="#4e6242" stroke-width="1.4"/><g transform="translate(16,7)"><circle r="5" fill="#c9a26b"/><g fill="#e9d4a6"><ellipse cx="0" cy="-7" rx="3.4" ry="5.6"/><ellipse cx="6.6" cy="-2" rx="3.4" ry="5.6" transform="rotate(72 6.6 -2)"/><ellipse cx="4" cy="6" rx="3.4" ry="5.6" transform="rotate(144 4 6)"/><ellipse cx="-4" cy="6" rx="3.4" ry="5.6" transform="rotate(216 -4 6)"/><ellipse cx="-6.6" cy="-2" rx="3.4" ry="5.6" transform="rotate(288 -6.6 -2)"/></g></g><ellipse cx="9" cy="18" rx="5" ry="3" fill="#8a9b6e" transform="rotate(-25 9 18)"/><ellipse cx="23" cy="18" rx="5" ry="3" fill="#8a9b6e" transform="rotate(25 23 18)"/></svg></div>
-        <div class="lab">Fiesta</div><div class="big">[Salón]</div><div class="small">A continuación</div>
-        <a href="[Maps]" target="_blank">Ver mapa</a>
+        <div class="lab">Fiesta</div><div class="big">Salón por confirmar</div><div class="small">A continuación de la ceremonia</div>
       </div>
     </div>
   </section>
@@ -228,16 +237,9 @@
   <section class="howto" id="como-llegar">
     <h2 class="kicker reveal">Cómo llegar</h2>
     <div class="map-wrap reveal d1">
-      <!-- Reemplazá este bloque por el iframe de Google Maps de tu lugar -->
-      <div class="map-placeholder">
-        <span class="pin">📍</span>
-        <span class="t">Mapa del lugar</span>
-      </div>
-      <!-- Ejemplo de iframe real (descomentá y pegá tu embed):
-      <iframe src="https://www.google.com/maps/embed?pb=..." loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-      -->
+      <iframe src="https://maps.google.com/maps?q=Bas%C3%ADlica+Nuestra+Se%C3%B1ora+de+Lourdes,+Av.+La+Plata+3757,+Santos+Lugares,+Buenos+Aires&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
-    <p class="map-note">Para activar el mapa: en Google Maps buscá el lugar → <code>Compartir</code> → <code>Insertar un mapa</code> → copiá el <code>&lt;iframe&gt;</code> y reemplazá el bloque indicado.</p>
+    <p class="map-note">Basílica Nuestra Señora de Lourdes · <code>Av. La Plata 3757, Santos Lugares, Buenos Aires</code></p>
   </section>
 
   <!-- ============ RSVP ============ -->
@@ -245,8 +247,11 @@
     <h2 class="kicker reveal">Confirmá tu lugar</h2>
     <div class="reveal d1">
       <p>Tu presencia es nuestro regalo.</p>
-      <p class="contact">[Tu WhatsApp]</p>
-      <a class="btn" href="[wa.me/...]" target="_blank">Confirmar</a>
+      <p class="contact">+54 11 5963-2661 · Ariel</p>
+      <a class="btn" href="https://wa.me/541159632661?text=Hola!+Confirmo+mi+asistencia+al+casamiento+de+Kathy+y+Ariel+%F0%9F%8C%BF" target="_blank">Confirmar asistencia</a>
+      <div style="margin-top:24px;">
+        <a class="btn" href="/fotos" style="background:transparent;border:1.5px solid var(--green);color:var(--green-d);font-size:.72rem;">📷 Subir fotos del casamiento</a>
+      </div>
     </div>
   </section>
 
@@ -258,7 +263,7 @@
   document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
 
   // countdown  >>> ajustá tu fecha aquí <<<
-  const WEDDING=new Date('2026-12-31T19:00:00').getTime();
+  const WEDDING=new Date('2026-12-19T18:00:00').getTime();
   const dd=document.getElementById('dd'),hh=document.getElementById('hh'),mm=document.getElementById('mm'),ss=document.getElementById('ss');
   const pad=n=>String(n).padStart(2,'0');
   function tick(){let d=Math.max(0,WEDDING-Date.now());
