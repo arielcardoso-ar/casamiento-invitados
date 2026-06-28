@@ -52,9 +52,8 @@
   .top-nav a{font-family:'Cormorant',serif;font-size:.7rem;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.9);background:rgba(30,42,22,.55);padding:7px 14px;border-radius:20px;text-decoration:none;transition:background .25s,color .25s;border:1px solid rgba(255,255,255,.18);}
   .top-nav a:hover{background:rgba(30,42,22,.8);color:#fff;}
 
-  .petals{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden;}
-  .petal{position:absolute;top:-40px;animation:fall linear infinite;}
-  @keyframes fall{0%{transform:translateY(-40px) rotate(0);opacity:0;}10%{opacity:.55;}90%{opacity:.55;}100%{transform:translateY(108vh) rotate(340deg);opacity:0;}}
+  .petals{position:fixed;inset:0;pointer-events:none;z-index:1;}
+  .petal{position:absolute;top:0;left:0;will-change:transform;}
 
   /* ============ COUNTDOWN ============ */
   .count{background:linear-gradient(165deg,var(--green) 0%,var(--green-d) 100%);color:var(--cream);text-align:center;position:relative;overflow:hidden;}
@@ -286,22 +285,56 @@
     v.style.transform=`${v.classList.contains('hv-tr')||v.classList.contains('hv-br')?'scaleX(-1) ':''}${v.classList.contains('hv-bl')||v.classList.contains('hv-br')?'scaleY(-1) ':''}`;
   });});
 
-  // floating petals — delay negativo para que aparezcan de inmediato
-  const layer=document.getElementById('petals');
-  const cols=['#d4b878','#c9a26b','#8a9b6e','#c08679','#9caf6a'];
-  for(let i=0;i<18;i++){const p=document.createElement('div');p.className='petal';const s=7+Math.random()*12;
-    const dur=10+Math.random()*14;
-    p.style.left=Math.random()*100+'vw';
-    p.style.animationDuration=dur+'s';
-    p.style.animationDelay=-(Math.random()*dur)+'s';  // empieza a mitad de la animación
-    p.innerHTML=`<svg width="${s}" height="${s*1.5}" viewBox="0 0 12 18" fill="none"><path d="M6 0 C10 5 11 12 6 18 C1 12 2 5 6 0Z" fill="${cols[i%cols.length]}" opacity="0.72"/></svg>`;
-    layer.appendChild(p);}
+  // ── Pétalos con física de mundo real + parallax de scroll ──────────────────
+  // Cada pétalo tiene una posición en "espacio mundo" (worldY).
+  // viewportY = worldY - scrollY * parallax  →  al scrollear, sube más lento que el fondo
+  const layer = document.getElementById('petals');
+  const cols  = ['#d4b878','#c9a26b','#8a9b6e','#c08679','#9caf6a'];
+  const VH    = window.innerHeight;
+  const PARALLAX = 0.55; // 0 = pegado a pantalla, 1 = posición absoluta pura
+  const petals = [];
 
-  // Parallax de pétalos: se mueven a ~45% de la velocidad del scroll hacia arriba
-  // → parecen estar en el mundo (posición absoluta) y caen más lento al scrollear
-  window.addEventListener('scroll',()=>{
-    layer.style.transform='translateY('+(-window.pageYOffset*0.45)+'px)';
-  },{passive:true});
+  for(let i = 0; i < 20; i++){
+    const el = document.createElement('div');
+    el.className = 'petal';
+    const s = 7 + Math.random() * 11;
+    el.innerHTML = `<svg width="${s}" height="${s*1.5}" viewBox="0 0 12 18" fill="none"><path d="M6 0 C10 5 11 12 6 18 C1 12 2 5 6 0Z" fill="${cols[i%cols.length]}" opacity="0.68"/></svg>`;
+    layer.appendChild(el);
+    petals.push({
+      el,
+      x:      Math.random() * 100,              // posición horizontal (vw)
+      worldY: -(40 + Math.random() * VH * 1.2), // empieza distribuido sobre la pantalla
+      speed:  45 + Math.random() * 75,           // px/s de caída
+      rot:    Math.random() * 360,
+      rotSpd: (Math.random() - 0.5) * 80,        // grados/s de rotación
+    });
+  }
+
+  let lastT = performance.now();
+  let scrollY = window.pageYOffset;
+  window.addEventListener('scroll', () => { scrollY = window.pageYOffset; }, {passive:true});
+
+  (function frame(now){
+    const dt = Math.min((now - lastT) / 1000, 0.05);
+    lastT = now;
+
+    petals.forEach(pt => {
+      pt.worldY += pt.speed * dt;   // caída en espacio mundo
+      pt.rot    += pt.rotSpd * dt;
+
+      if(pt.worldY > VH * 1.15) {  // reciclar al pasar del fondo
+        pt.worldY = -(30 + Math.random() * 120);
+        pt.x = Math.random() * 100;
+      }
+
+      const viewY = pt.worldY - scrollY * PARALLAX;
+      const visible = viewY > -60 && viewY < VH + 60;
+      pt.el.style.opacity   = visible ? '1' : '0';
+      pt.el.style.transform = `translate(${pt.x}vw, ${viewY}px) rotate(${pt.rot}deg)`;
+    });
+
+    requestAnimationFrame(frame);
+  })(lastT);
 </script>
 </body>
 </html>
