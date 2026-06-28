@@ -286,15 +286,6 @@
     v.style.transform=`${v.classList.contains('hv-tr')||v.classList.contains('hv-br')?'scaleX(-1) ':''}${v.classList.contains('hv-bl')||v.classList.contains('hv-br')?'scaleY(-1) ':''}`;
   });});
 
-  // scroll parallax en el hero
-  const heroPhoto=document.querySelector('.hero-photo');
-  window.addEventListener('scroll',()=>{
-    const s=window.pageYOffset;
-    if(s<window.innerHeight){
-      heroPhoto.style.transform=`scale(1.1) translateY(${s*0.35}px)`;
-    }
-  },{passive:true});
-
   // floating petals — delay negativo para que aparezcan de inmediato
   const layer=document.getElementById('petals');
   const cols=['#d4b878','#c9a26b','#8a9b6e','#c08679','#9caf6a'];
@@ -305,6 +296,12 @@
     p.style.animationDelay=-(Math.random()*dur)+'s';  // empieza a mitad de la animación
     p.innerHTML=`<svg width="${s}" height="${s*1.5}" viewBox="0 0 12 18" fill="none"><path d="M6 0 C10 5 11 12 6 18 C1 12 2 5 6 0Z" fill="${cols[i%cols.length]}" opacity="0.72"/></svg>`;
     layer.appendChild(p);}
+
+  // Parallax de pétalos: se mueven a ~45% de la velocidad del scroll hacia arriba
+  // → parecen estar en el mundo (posición absoluta) y caen más lento al scrollear
+  window.addEventListener('scroll',()=>{
+    layer.style.transform='translateY('+(-window.pageYOffset*0.45)+'px)';
+  },{passive:true});
 </script>
 </body>
 </html>
