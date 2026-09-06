@@ -1,0 +1,483 @@
+/* ==========================================================================
+   Katherine & Ariel — sistema de diseño
+   Paleta: verde suave (salvia), blancos cálidos y rosas empolvados.
+   Todas las páginas del sitio comparten estos tokens y componentes.
+   ========================================================================== */
+
+:root {
+    /* ── Verde salvia ── */
+    --green-50:  #f3f7ef;
+    --green-100: #e6eedf;
+    --green-200: #d1e0c5;
+    --green-300: #b4caa4;
+    --green-400: #95b083;
+    --green-500: #7a9666;
+    --green-600: #617b50;
+    --green-700: #4c6140;
+    --green-800: #3b4c33;
+
+    /* ── Rosa empolvado ── */
+    --rose-50:   #fdf6f5;
+    --rose-100:  #fbeae9;
+    --rose-200:  #f6d7d7;
+    --rose-300:  #eebbbc;
+    --rose-400:  #e29ca0;
+    --rose-500:  #d17d84;
+    --rose-600:  #b8626c;
+    --rose-700:  #934c56;
+
+    /* ── Blancos y tinta ── */
+    --white:     #ffffff;
+    --paper:     #fdfcf9;
+    --paper-2:   #f7f6f0;
+    --ink:       #37402f;
+    --ink-soft:  #55604a;
+    --muted:     #78826c;
+
+    /* ── Líneas y sombras ── */
+    --line:      rgba(122, 150, 102, .18);
+    --line-soft: rgba(122, 150, 102, .10);
+    --shadow-sm: 0 2px 10px rgba(59, 76, 51, .06);
+    --shadow:    0 6px 26px rgba(59, 76, 51, .09);
+    --shadow-lg: 0 18px 50px rgba(59, 76, 51, .14);
+
+    /* ── Formas ── */
+    --radius:    18px;
+    --radius-sm: 12px;
+    --radius-xs: 9px;
+
+    /* ── Tipografías ── */
+    --font-script:  'Great Vibes', cursive;
+    --font-script2: 'Pinyon Script', cursive;
+    --font-serif:   'Cormorant Garamond', Georgia, serif;
+    --font-caps:    'Cormorant', Georgia, serif;
+    --font-ui:      'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+    /* Safe areas del iPhone, con un piso razonable */
+    --pad-x: max(1rem, env(safe-area-inset-left), env(safe-area-inset-right));
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* Escala tipográfica fluida.
+   Todo el sitio está medido en rem, así que mover el tamaño de la raíz hace
+   crecer proporcionalmente textos, botones, espaciados y radios. Sin esto la
+   invitación se ve con cuerpo de celular cuando se abre en una computadora:
+   16px a 390px de ancho, ~20px a 1280px, tope de 21px. */
+html {
+    font-size: clamp(16px, 14.2px + 0.42vw, 21px);
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    font-family: var(--font-ui);
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.6;
+    min-height: 100svh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+img { max-width: 100%; display: block; }
+
+::selection { background: var(--rose-200); color: var(--green-800); }
+
+:focus-visible {
+    outline: 2px solid var(--green-500);
+    outline-offset: 3px;
+    border-radius: 4px;
+}
+
+/* ── Etiqueta versalita reutilizable ── */
+.eyebrow {
+    font-family: var(--font-caps);
+    font-size: .74rem;
+    letter-spacing: .32em;
+    text-transform: uppercase;
+    color: var(--green-600);
+    font-weight: 500;
+}
+
+/* ── Filete decorativo (hoja entre dos líneas) ── */
+.rule {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .7rem;
+    margin: 1rem auto;
+    max-width: 220px;
+    color: var(--green-400);
+}
+.rule::before, .rule::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, currentColor, transparent);
+    opacity: .6;
+}
+
+/* ==========================================================================
+   Cabecera del sitio (páginas internas)
+   ========================================================================== */
+
+.site-header {
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+    padding: calc(2rem + env(safe-area-inset-top)) 1.25rem 1.6rem;
+    background:
+        radial-gradient(ellipse at 18% 100%, var(--rose-100) 0%, transparent 58%),
+        radial-gradient(ellipse at 84% 0%, var(--green-100) 0%, transparent 60%),
+        linear-gradient(170deg, var(--white) 0%, var(--paper-2) 100%);
+    border-bottom: 1px solid var(--line-soft);
+}
+.site-header a { text-decoration: none; display: inline-block; }
+.header-names {
+    font-family: var(--font-script);
+    font-size: clamp(2.3rem, 9vw, 3rem);
+    line-height: 1.05;
+    color: var(--green-700);
+}
+.header-amp { color: var(--rose-400); margin: 0 .12em; }
+.header-date {
+    font-family: var(--font-caps);
+    font-size: .72rem;
+    letter-spacing: .26em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: .5rem;
+}
+
+/* ==========================================================================
+   Navegación
+   ========================================================================== */
+
+.site-nav {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(253, 252, 249, .92);
+    backdrop-filter: saturate(1.4) blur(12px);
+    -webkit-backdrop-filter: saturate(1.4) blur(12px);
+    border-bottom: 1px solid var(--line);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+}
+.nav-link {
+    flex: 1;
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .35rem;
+    padding: .8rem .35rem;
+    font-size: .8rem;
+    font-weight: 500;
+    color: var(--muted);
+    text-decoration: none;
+    text-align: center;
+    border-bottom: 2px solid transparent;
+    transition: color .2s, background .2s, border-color .2s;
+}
+.nav-link:hover { color: var(--green-700); background: var(--green-50); }
+.nav-link.active {
+    color: var(--green-700);
+    font-weight: 600;
+    border-bottom-color: var(--rose-300);
+    background: linear-gradient(180deg, transparent, var(--rose-50));
+}
+.nav-icon { font-size: .95rem; line-height: 1; }
+.nav-lock { font-size: .68rem; opacity: .5; }
+
+/* Android chico: cuatro secciones tienen que entrar sin desbordar. */
+@media (max-width: 384px) {
+    .nav-link { font-size: .72rem; gap: .25rem; padding: .8rem .2rem; }
+    .nav-icon { font-size: .85rem; }
+    .nav-lock { font-size: .6rem; }
+}
+
+/* En pantalla grande los cuatro links no se estiran de punta a punta: se
+   agrupan al centro, alineados con la columna de contenido. */
+@media (min-width: 700px) {
+    .site-nav { justify-content: center; }
+    .nav-link { flex: 0 1 11rem; min-height: 58px; font-size: .88rem; }
+    .nav-icon { font-size: 1.05rem; }
+}
+
+/* ==========================================================================
+   Layout
+   ========================================================================== */
+
+/* En rem, para que la columna acompañe el crecimiento del cuerpo de texto
+   y no queden 20px de letra dentro de una columna de ancho de celular. */
+.container {
+    max-width: 38rem;
+    margin: 0 auto;
+    padding: 1.5rem var(--pad-x) calc(3.5rem + env(safe-area-inset-bottom));
+}
+/* La galería aprovecha todo el ancho: son fotos, no texto para leer. */
+.container.wide { max-width: 68rem; }
+
+.page-intro { text-align: center; padding: .75rem 0 1.5rem; }
+.page-intro h1 {
+    font-family: var(--font-serif);
+    font-size: clamp(1.6rem, 6vw, 2.1rem);
+    font-weight: 400;
+    color: var(--green-800);
+    line-height: 1.2;
+    margin-bottom: .5rem;
+}
+.page-intro p { color: var(--muted); font-size: .94rem; max-width: 34ch; margin: 0 auto; }
+
+/* ==========================================================================
+   Tarjetas
+   ========================================================================== */
+
+.card {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.5rem;
+}
+
+/* ==========================================================================
+   Botones
+   ========================================================================== */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    min-height: 48px;
+    padding: .85rem 1.6rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-ui);
+    font-size: .95rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .22s, color .22s, border-color .22s, transform .12s, box-shadow .22s;
+}
+.btn:active:not(:disabled) { transform: scale(.985); }
+.btn:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--green-600), var(--green-500));
+    color: var(--white);
+    box-shadow: 0 6px 18px rgba(76, 97, 64, .22);
+}
+.btn-primary:hover:not(:disabled) { background: linear-gradient(135deg, var(--green-700), var(--green-600)); }
+
+.btn-rose {
+    background: linear-gradient(135deg, var(--rose-500), var(--rose-400));
+    color: var(--white);
+    box-shadow: 0 6px 18px rgba(184, 98, 108, .22);
+}
+.btn-rose:hover:not(:disabled) { background: linear-gradient(135deg, var(--rose-600), var(--rose-500)); }
+
+.btn-ghost {
+    background: var(--white);
+    color: var(--green-700);
+    border-color: var(--line);
+}
+.btn-ghost:hover:not(:disabled) { background: var(--green-50); border-color: var(--green-300); }
+
+.btn-block { width: 100%; }
+
+/* ==========================================================================
+   Campos de formulario
+   ========================================================================== */
+
+.field-label {
+    display: block;
+    font-family: var(--font-caps);
+    font-size: .72rem;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: .6rem;
+}
+.input-field {
+    width: 100%;
+    padding: .85rem 1rem;
+    border: 1.5px solid var(--line);
+    border-radius: var(--radius-xs);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: 1rem;              /* 16px evita el zoom automático en iOS */
+    transition: border-color .2s, box-shadow .2s, background .2s;
+    -webkit-appearance: none;
+}
+.input-field::placeholder { color: #a3ab99; }
+.input-field:focus {
+    outline: none;
+    background: var(--white);
+    border-color: var(--green-400);
+    box-shadow: 0 0 0 3px rgba(122, 150, 102, .14);
+}
+
+/* ==========================================================================
+   Mensajes de estado
+   ========================================================================== */
+
+.status-msg {
+    margin-top: 1rem;
+    padding: .95rem 1rem;
+    border-radius: var(--radius-sm);
+    text-align: center;
+    font-size: .94rem;
+    font-weight: 500;
+    display: none;
+}
+.status-msg.show { display: block; }
+.status-msg.success {
+    background: var(--green-50);
+    color: var(--green-800);
+    border: 1px solid var(--green-200);
+}
+.status-msg.error {
+    background: var(--rose-50);
+    color: var(--rose-700);
+    border: 1px solid var(--rose-200);
+}
+
+/* ==========================================================================
+   Estado bloqueado (galería / fotos antes del evento)
+   ========================================================================== */
+
+.locked {
+    text-align: center;
+    padding: 3rem 1.5rem 3.25rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background:
+        radial-gradient(ellipse at 22% 0%, var(--rose-50) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 100%, var(--green-50) 0%, transparent 55%),
+        var(--white);
+    box-shadow: var(--shadow);
+}
+.locked-seal { margin: 0 auto 1.4rem; width: 84px; height: 84px; }
+.locked h1 {
+    font-family: var(--font-serif);
+    font-size: clamp(1.5rem, 5.5vw, 1.9rem);
+    font-weight: 400;
+    color: var(--green-800);
+    margin-bottom: .6rem;
+}
+.locked p { color: var(--muted); font-size: .96rem; max-width: 32ch; margin: 0 auto; }
+
+.locked-timer {
+    display: flex;
+    justify-content: center;
+    gap: clamp(.5rem, 4vw, 1.3rem);
+    margin: 2rem 0 .5rem;
+}
+.locked-timer .unit { min-width: 58px; }
+.locked-timer .num {
+    font-family: var(--font-serif);
+    font-size: clamp(1.9rem, 8vw, 2.6rem);
+    line-height: 1;
+    color: var(--green-700);
+    font-variant-numeric: tabular-nums;
+}
+.locked-timer .u {
+    font-family: var(--font-caps);
+    font-size: .62rem;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: .5rem;
+}
+.locked-date {
+    font-family: var(--font-caps);
+    font-size: .76rem;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--rose-600);
+    margin-top: 1.5rem;
+}
+
+/* ==========================================================================
+   Aviso flotante (copiado, etc.)
+   ========================================================================== */
+
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(1.5rem + env(safe-area-inset-bottom));
+    transform: translate(-50%, calc(100% + 3rem));
+    z-index: 300;
+    padding: .8rem 1.4rem;
+    border-radius: 99px;
+    background: var(--green-800);
+    color: var(--white);
+    font-size: .9rem;
+    font-weight: 500;
+    box-shadow: var(--shadow-lg);
+    /* Sin `visibility` la píldora vacía asoma unos píxeles sobre el borde. */
+    visibility: hidden;
+    opacity: 0;
+    transition: transform .35s cubic-bezier(.2, .8, .2, 1), opacity .25s, visibility .35s;
+    pointer-events: none;
+    max-width: calc(100vw - 2rem);
+    text-align: center;
+}
+.toast.show { transform: translate(-50%, 0); visibility: visible; opacity: 1; }
+
+/* ==========================================================================
+   Pie
+   ========================================================================== */
+
+.site-footer {
+    text-align: center;
+    padding: 2.5rem 1.25rem calc(2.5rem + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line-soft);
+    background: var(--paper-2);
+}
+.site-footer .sign {
+    font-family: var(--font-script);
+    font-size: 2rem;
+    color: var(--green-600);
+    line-height: 1.2;
+}
+.site-footer .meta {
+    font-family: var(--font-caps);
+    font-size: .68rem;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: .6rem;
+}
+
+/* ==========================================================================
+   Animación de entrada (compartida)
+   ========================================================================== */
+
+.reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 1s ease, transform 1s cubic-bezier(.2, .7, .2, 1);
+}
+.reveal.in { opacity: 1; transform: none; }
+.reveal.d1 { transition-delay: .1s; }
+.reveal.d2 { transition-delay: .2s; }
+.reveal.d3 { transition-delay: .3s; }
+
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+    }
+    .reveal { opacity: 1; transform: none; }
+}

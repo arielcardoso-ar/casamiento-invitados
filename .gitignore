@@ -14,3 +14,7 @@ static/uploads/
 *.swp
 *.swo
 *~
+
+# SQLite en modo WAL
+*.db-wal
+*.db-shm

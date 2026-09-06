@@ -1,178 +1,129 @@
 {% extends "base.html" %}
 
+{% block title %}Código QR — {{ novia_corto }} &amp; {{ novio_corto }}{% endblock %}
+
 {% block styles %}
-.qr-container {
-    background: white;
-    border-radius: 16px;
-    padding: 2rem;
-    text-align: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+.qr-card {
+    text-align: center; padding: 2rem 1.5rem;
+    background: var(--white); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow);
 }
-.qr-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #333;
-    margin-bottom: 1rem;
+.qr-card .lab {
+    font-family: var(--font-caps); font-size: .7rem; letter-spacing: .3em;
+    text-transform: uppercase; color: var(--rose-600);
 }
-.qr-subtitle {
-    color: #666;
-    margin-bottom: 2rem;
+.qr-card h1 {
+    font-family: var(--font-script); font-size: 2.4rem;
+    color: var(--green-700); line-height: 1.2; margin: .4rem 0 .2rem;
 }
-.qr-image-container {
-    background: #f8f8f8;
-    padding: 2rem;
-    border-radius: 12px;
-    margin-bottom: 2rem;
+.qr-card .sub { color: var(--muted); font-size: .95rem; font-style: italic; }
+
+.qr-marco {
+    display: inline-block; margin: 1.6rem auto .4rem; padding: 1rem;
+    border: 1px solid var(--line); border-radius: var(--radius-sm);
+    background: var(--white);
 }
-.qr-image {
-    max-width: 300px;
-    width: 100%;
-    height: auto;
-    border: 4px solid white;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+.qr-marco img { width: min(260px, 68vw); height: auto; }
+.qr-destino { font-size: .84rem; color: var(--muted); word-break: break-all; }
+
+.destinos { display: flex; flex-wrap: wrap; justify-content: center; gap: .45rem; margin-top: 1.5rem; }
+.destinos button {
+    padding: .5rem 1rem; border-radius: 99px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--white); color: var(--green-700);
+    font-family: var(--font-ui); font-size: .82rem; font-weight: 500;
+    transition: background .2s, border-color .2s, color .2s;
 }
-.instructions {
-    background: #f0f0f0;
-    padding: 1.5rem;
-    border-radius: 12px;
-    margin-bottom: 1.5rem;
-    text-align: left;
+.destinos button:hover { background: var(--green-50); }
+.destinos button[aria-pressed="true"] {
+    background: var(--green-600); border-color: var(--green-600); color: #fff; font-weight: 600;
 }
-.instructions h3 {
-    color: #667eea;
-    margin-bottom: 1rem;
-    font-size: 1.1rem;
+
+.link-row { display: flex; gap: .5rem; margin-top: 1.5rem; }
+.link-row .input-field { flex: 1; font-size: .88rem; }
+.link-row button { flex: none; }
+
+.ayuda {
+    margin-top: 1.5rem; padding: 1.1rem 1.25rem;
+    border: 1px solid var(--line); border-left: 3px solid var(--green-300);
+    border-radius: var(--radius-sm); background: var(--white); text-align: left;
 }
-.instructions ol {
-    padding-left: 1.5rem;
-    line-height: 1.8;
+.ayuda h2 {
+    font-family: var(--font-caps); font-size: .72rem; letter-spacing: .24em;
+    text-transform: uppercase; color: var(--green-700); font-weight: 500; margin-bottom: .6rem;
 }
-.instructions li {
-    margin-bottom: 0.5rem;
-    color: #333;
-}
-.link-box {
-    background: #f8f8f8;
-    padding: 1rem;
-    border-radius: 8px;
-    margin: 1rem 0;
-    display: flex;
-    gap: 0.5rem;
-}
-.link-box input {
-    flex: 1;
-    padding: 0.75rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    background: white;
-}
-.btn-copy {
-    padding: 0.75rem 1.5rem;
-    background: #667eea;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-}
-.btn-copy:active {
-    transform: scale(0.98);
-}
-.copy-status {
-    text-align: center;
-    padding: 0.5rem;
-    border-radius: 6px;
-    font-weight: 600;
-    margin-top: 0.5rem;
-    display: none;
-}
-.copy-status.success {
-    background: #d4edda;
-    color: #155724;
-    display: block;
-}
-.actions {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 1.5rem;
-}
-.btn-action {
-    flex: 1;
-    padding: 1rem;
-    border-radius: 10px;
-    font-weight: 600;
-    text-decoration: none;
-    text-align: center;
-    transition: all 0.3s;
-}
-.btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-}
-.btn-secondary {
-    background: white;
-    color: #667eea;
-    border: 2px solid #667eea;
+.ayuda ol { padding-left: 1.2rem; display: grid; gap: .35rem; }
+.ayuda li { font-size: .9rem; color: var(--ink-soft); }
+
+@media print {
+    .site-nav, .site-footer, .destinos, .link-row, .ayuda, .no-print { display: none !important; }
+    .qr-card { border: none; box-shadow: none; }
+    body { background: #fff; }
 }
 {% endblock %}
 
 {% block content %}
-<div class="qr-container">
-    <h2 class="qr-title">📱 Código QR</h2>
-    <p class="qr-subtitle">Escaneá para subir fotos</p>
-    
-    <div class="qr-image-container">
-        <img src="/qr" alt="Código QR" class="qr-image">
+<div class="qr-card">
+    <p class="lab">Escaneá y sumate</p>
+    <h1>{{ novia_corto }} &amp; {{ novio_corto }}</h1>
+    <p class="sub">{{ fecha_larga }}</p>
+
+    <div class="qr-marco">
+        <img id="qrImg" src="/qr" alt="Código QR del sitio del casamiento">
     </div>
-    
-    <div class="instructions">
-        <h3>¿Cómo usar el QR?</h3>
+    <p class="qr-destino" id="qrDestino">{{ request.host_url }}</p>
+
+    <div class="destinos no-print" role="group" aria-label="Destino del código QR">
+        <button type="button" aria-pressed="true"  data-src="/qr"             data-url="{{ request.host_url }}">Invitación</button>
+        <button type="button" aria-pressed="false" data-src="/qr?to=fotos"    data-url="{{ request.host_url }}fotos">Subir fotos</button>
+        <button type="button" aria-pressed="false" data-src="/qr?to=galeria"  data-url="{{ request.host_url }}galeria">Galería</button>
+        <button type="button" aria-pressed="false" data-src="/qr?to=regalo"   data-url="{{ request.host_url }}regalo">Regalo</button>
+        {% if mp_qr %}
+        <button type="button" aria-pressed="false" data-src="{{ mp_qr_src }}"
+                data-url="{{ mp_link or 'QR oficial de Mercado Pago' }}"
+                title="Un toque menos para el invitado, pero Mercado Pago cobra comisión">💸 Pago con QR (con comisión)</button>
+        {% endif %}
+    </div>
+
+    <div class="link-row no-print">
+        <input class="input-field" id="linkSitio" value="{{ request.host_url }}" readonly aria-label="Link del sitio">
+        <button type="button" class="btn btn-primary" id="btnCopiarLink">Copiar</button>
+    </div>
+
+    <div class="ayuda no-print">
+        <h2>Para imprimir en el salón</h2>
         <ol>
-            <li>Abrí la cámara de tu celular</li>
-            <li>Apuntá al código QR</li>
-            <li>Tocá la notificación que aparece</li>
-            <li>¡Listo! Ya podés subir fotos</li>
+            <li>Para los carteles de las mesas: <em>Subir fotos</em>.</li>
+            <li>Para la mesa de regalos: <em>Regalo</em> — cae en la página con el
+                alias y el botón que copia y abre Mercado Pago, sin comisión.</li>
+            <li>Imprimí esta página: sale sólo la tarjeta con el QR.</li>
+            <li>Probalo con la cámara del celular antes de mandarlo a imprimir.</li>
         </ol>
-    </div>
-    
-    <div class="instructions">
-        <h3>🔗 O compartí este link:</h3>
-        <div class="link-box">
-            <input type="text" id="photoLink" value="{{ request.host_url }}" readonly>
-            <button onclick="copyLink()" class="btn-copy">📋 Copiar</button>
-        </div>
-        <div id="copyStatus" class="copy-status"></div>
-    </div>
-    
-    <div class="actions">
-        <a href="/" class="btn-action btn-primary">📸 Subir Foto</a>
-        <a href="/galeria" class="btn-action btn-secondary">🖼️ Ver Galería</a>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-function copyLink() {
-    const linkInput = document.getElementById('photoLink');
-    const copyStatus = document.getElementById('copyStatus');
-    
-    linkInput.select();
-    linkInput.setSelectionRange(0, 99999);
-    
-    navigator.clipboard.writeText(linkInput.value).then(() => {
-        copyStatus.className = 'copy-status success';
-        copyStatus.textContent = '✓ Link copiado';
-        
-        setTimeout(() => {
-            copyStatus.style.display = 'none';
-        }, 2000);
-    }).catch(err => {
-        alert('Error al copiar: ' + err);
+(function () {
+    'use strict';
+
+    const img = document.getElementById('qrImg');
+    const destino = document.getElementById('qrDestino');
+    const link = document.getElementById('linkSitio');
+
+    document.querySelectorAll('.destinos button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.destinos button')
+                .forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+            img.src = btn.dataset.src;
+            destino.textContent = btn.dataset.url;
+            link.value = btn.dataset.url;
+        });
     });
-}
+
+    document.getElementById('btnCopiarLink').addEventListener('click', () => {
+        copiar(link.value, 'Link copiado');
+    });
+})();
 </script>
 {% endblock %}

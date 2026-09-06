@@ -3,15 +3,30 @@ services:
     name: casamiento-invitados
     env: python
     buildCommand: "pip install -r requirements.txt && python database.py"
-    startCommand: "gunicorn app:app"
+    startCommand: "gunicorn app:app --workers 1 --threads 4 --timeout 120"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.7
+
+      # Persistencia de las fotos (obligatorio en producción).
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
+
+      # Habilita /admin/sync-from-cloudinary y la vista previa ?unlock=<secreto>.
       - key: ADMIN_SECRET
         sync: false
+      # Firma la cookie de vista previa; sin esto se pierde en cada reinicio.
+      - key: SECRET_KEY
+        sync: false
+
+      # Opcionales: sobreescriben lo que trae config.py sin tocar el código.
+      # - key: FECHA_EVENTO      # ISO, hora de Argentina. Ej: 2027-01-16T17:30:00
+      # - key: APERTURA_FOTOS    # cuándo se habilitan galería y subida
+      # - key: MP_ALIAS
+      # - key: MP_CVU
+      # - key: MP_LINK       # link de cobro; con esto el sitio arma el QR de pago
+      # - key: MP_QR_IMG     # o el QR oficial de la app (archivo en static/ o URL)

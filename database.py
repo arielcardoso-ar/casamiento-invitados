@@ -13,8 +13,17 @@ class CasamientoDatabase:
         self.init_database()
     
     def get_connection(self):
-        conn = sqlite3.connect(self.db_path)
+        # Durante la fiesta varios invitados suben fotos a la vez y gunicorn
+        # atiende con varios hilos: WAL + espera larga evitan el clásico
+        # "database is locked" justo cuando más se está usando.
+        conn = sqlite3.connect(self.db_path, timeout=20)
         conn.row_factory = sqlite3.Row
+        try:
+            conn.execute('PRAGMA journal_mode=WAL')
+            conn.execute('PRAGMA busy_timeout=20000')
+            conn.execute('PRAGMA synchronous=NORMAL')
+        except sqlite3.Error:
+            pass  # una base de sólo lectura no acepta PRAGMAs: seguimos igual
         return conn
     
     def init_database(self):

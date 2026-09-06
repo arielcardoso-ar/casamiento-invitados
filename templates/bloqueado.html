@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}{{ pestania }} — se abre el {{ fecha_corta }}{% endblock %}
+
+{% block styles %}
+.locked-actions {
+    display: flex;
+    flex-direction: column;
+    gap: .7rem;
+    margin-top: 2.25rem;
+}
+.locked-hint {
+    margin-top: 1.75rem;
+    font-size: .86rem;
+    color: var(--muted);
+    max-width: 34ch;
+    margin-inline: auto;
+}
+.seal-ring { animation: pulso 5s ease-in-out infinite; transform-origin: center; }
+@keyframes pulso { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+{% endblock %}
+
+{% block content %}
+<div class="locked">
+    <svg class="locked-seal" viewBox="0 0 96 96" fill="none" aria-hidden="true">
+        <circle class="seal-ring" cx="48" cy="48" r="45" stroke="#eebbbc" stroke-width="1.2" stroke-dasharray="3 5"/>
+        <circle cx="48" cy="48" r="36" fill="#f3f7ef" stroke="#b4caa4" stroke-width="1.4"/>
+        <!-- ramita -->
+        <path d="M48 68 V38" stroke="#7a9666" stroke-width="1.8" stroke-linecap="round"/>
+        <g fill="#95b083">
+            <ellipse cx="39" cy="58" rx="8" ry="4" transform="rotate(-28 39 58)"/>
+            <ellipse cx="57" cy="58" rx="8" ry="4" transform="rotate(28 57 58)"/>
+            <ellipse cx="40" cy="49" rx="7" ry="3.6" transform="rotate(-24 40 49)"/>
+            <ellipse cx="56" cy="49" rx="7" ry="3.6" transform="rotate(24 56 49)"/>
+        </g>
+        <!-- rosa -->
+        <g transform="translate(48,34)">
+            <circle r="10" fill="#f6d7d7"/>
+            <g fill="#eebbbc">
+                <ellipse cx="0" cy="-6.5" rx="4.4" ry="6"/>
+                <ellipse cx="6.2" cy="-2" rx="4.4" ry="6" transform="rotate(72 6.2 -2)"/>
+                <ellipse cx="3.8" cy="5.3" rx="4.4" ry="6" transform="rotate(144 3.8 5.3)"/>
+                <ellipse cx="-3.8" cy="5.3" rx="4.4" ry="6" transform="rotate(216 -3.8 5.3)"/>
+                <ellipse cx="-6.2" cy="-2" rx="4.4" ry="6" transform="rotate(288 -6.2 -2)"/>
+            </g>
+            <circle r="4.6" fill="#e29ca0"/>
+        </g>
+    </svg>
+
+    <h1>{{ titulo }}</h1>
+    <p>{{ copy }}</p>
+
+    <div class="locked-timer" id="timer" role="timer" aria-label="Cuenta regresiva a la apertura">
+        <div class="unit"><div class="num" id="dd">00</div><div class="u">Días</div></div>
+        <div class="unit"><div class="num" id="hh">00</div><div class="u">Horas</div></div>
+        <div class="unit"><div class="num" id="mm">00</div><div class="u">Min</div></div>
+        <div class="unit"><div class="num" id="ss">00</div><div class="u">Seg</div></div>
+    </div>
+
+    <p class="locked-date">{{ fecha_dia_mes }} · {{ hora_ceremonia }}</p>
+
+    <div class="locked-actions">
+        <a class="btn btn-primary btn-block" href="/">Ver la invitación</a>
+        <button type="button" class="btn btn-ghost btn-block" id="guardarLink">
+            🔖 Guardar este link
+        </button>
+    </div>
+
+    <p class="locked-hint">
+        Tip: guardá la página en la pantalla de inicio de tu celular. El día del
+        casamiento se habilita sola y vas a poder subir tus fotos en dos toques.
+    </p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    'use strict';
+
+    const apertura = new Date('{{ apertura_iso }}').getTime();
+    const campos = { dd: document.getElementById('dd'), hh: document.getElementById('hh'),
+                     mm: document.getElementById('mm'), ss: document.getElementById('ss') };
+    const dos = n => String(n).padStart(2, '0');
+
+    function actualizar() {
+        let resto = Math.max(0, apertura - Date.now());
+        const d = Math.floor(resto / 864e5); resto -= d * 864e5;
+        const h = Math.floor(resto / 36e5); resto -= h * 36e5;
+        const m = Math.floor(resto / 6e4);  resto -= m * 6e4;
+        campos.dd.textContent = dos(d);
+        campos.hh.textContent = dos(h);
+        campos.mm.textContent = dos(m);
+        campos.ss.textContent = dos(Math.floor(resto / 1e3));
+        return resto === 0 && d === 0 && h === 0 && m === 0;
+    }
+    actualizar();
+    setInterval(actualizar, 1000);
+
+    // Cuando el reloj llega a cero, el servidor es quien decide. Consultamos
+    // cada 15 segundos y recargamos apenas habilite: nadie tiene que refrescar.
+    setInterval(async () => {
+        if (Date.now() < apertura - 60000) return;
+        try {
+            const r = await fetch('/api/estado', { cache: 'no-store' });
+            const estado = await r.json();
+            if (estado.abierto) location.reload();
+        } catch { /* sin conexión: reintenta en el próximo ciclo */ }
+    }, 15000);
+
+    // Compartir / copiar el link para volver el día del evento.
+    document.getElementById('guardarLink').addEventListener('click', async () => {
+        const url = location.origin;
+        if (navigator.share) {
+            try { await navigator.share({ title: '{{ novia_corto }} & {{ novio_corto }}', url }); return; }
+            catch { /* si cancela, caemos al copiado */ }
+        }
+        copiar(url, 'Link copiado ✓');
+    });
+})();
+</script>
+{% endblock %}

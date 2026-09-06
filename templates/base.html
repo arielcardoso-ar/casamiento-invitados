@@ -1,169 +1,110 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#36452e">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Kathy & Ariel">
-    <title>{% block title %}Katherine & Ariel — 19 · 12 · 2026{% endblock %}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Cormorant:wght@300;400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --green:      #4e6242;
-            --green-d:    #36452e;
-            --green-l:    #8a9b6e;
-            --gold:       #b89150;
-            --gold-l:     #d4b878;
-            --gold-deep:  #936f33;
-            --sage:       #aab988;
-            --cream:      #f3f1e6;
-            --cream-2:    #e9ead9;
-            --ink:        #2f3a2a;
-            --soft:       #5f6b54;
-            --white:      #ffffff;
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#fdfcf9">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="{{ novia_corto }} & {{ novio_corto }}">
+<meta name="description" content="{{ novia_corto }} y {{ novio_corto }} se casan el {{ fecha_larga }}. Invitación, galería compartida y fotos de los invitados.">
 
-            /* Aliases para que fotos.html y galeria.html sigan funcionando */
-            --rose:       #4e6242;
-            --rose-dark:  #36452e;
-            --rose-light: #e9ead9;
-            --text:       #2f3a2a;
-            --text-muted: #5f6b54;
+<title>{% block title %}{{ novia_corto }} &amp; {{ novio_corto }} — {{ fecha_corta }}{% endblock %}</title>
 
-            --radius:     16px;
-            --shadow:     0 4px 24px rgba(47,58,42,.10);
-            --shadow-lg:  0 8px 40px rgba(47,58,42,.16);
-        }
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🌿</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Pinyon+Script&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Cormorant:wght@300;400;500&family=Inter:wght@300;400;500;600&display=swap">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/wedding.css') }}">
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Inter', -apple-system, sans-serif;
-            background: var(--cream);
-            min-height: 100vh;
-            color: var(--ink);
-            -webkit-font-smoothing: antialiased;
-        }
-
-        /* ── Header ── */
-        .site-header {
-            background: linear-gradient(160deg, #2f3a2a 0%, #4e6242 55%, #6b8a5a 100%);
-            padding: calc(2.2rem + env(safe-area-inset-top)) 1.5rem 1.8rem;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-        .site-header::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background:
-                radial-gradient(ellipse at 15% 85%, rgba(170,185,136,.10) 0%, transparent 55%),
-                radial-gradient(ellipse at 85% 15%, rgba(184,145,80,.09) 0%, transparent 55%);
-        }
-        .header-names {
-            font-family: 'Great Vibes', cursive;
-            font-size: 2.8rem;
-            color: #fdfaf0;
-            text-shadow: 0 2px 18px rgba(0,0,0,.22);
-            position: relative;
-            line-height: 1.1;
-        }
-        .header-amp {
-            color: var(--gold-l);
-            margin: 0 .2em;
-        }
-        .header-divider {
-            width: 36px;
-            height: 1px;
-            background: rgba(184,145,80,.45);
-            margin: .55rem auto;
-        }
-        .header-date {
-            font-family: 'Cormorant', serif;
-            font-size: .78rem;
-            color: rgba(255,255,255,.62);
-            letter-spacing: .18em;
-            text-transform: uppercase;
-            font-weight: 300;
-            position: relative;
-        }
-
-        /* ── Nav ── */
-        .site-nav {
-            display: flex;
-            background: var(--white);
-            border-bottom: 1px solid rgba(78,98,66,.12);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 2px 10px rgba(47,58,42,.07);
-        }
-        .nav-link {
-            flex: 1;
-            padding: .85rem .5rem;
-            color: var(--soft);
-            text-decoration: none;
-            text-align: center;
-            font-size: .82rem;
-            font-weight: 500;
-            transition: all .2s;
-            border-bottom: 3px solid transparent;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: .35rem;
-            min-height: 52px;
-        }
-        .nav-link:hover  { color: var(--green); background: rgba(233,234,217,.5); }
-        .nav-link.active {
-            color: var(--green);
-            border-bottom-color: var(--gold);
-            background: rgba(233,234,217,.4);
-            font-weight: 600;
-        }
-        .nav-icon { font-size: .95rem; }
-
-        /* ── Container ── */
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 1.5rem 1rem calc(3rem + env(safe-area-inset-bottom));
-            padding-left:  max(1rem, env(safe-area-inset-left));
-            padding-right: max(1rem, env(safe-area-inset-right));
-        }
-
-        {% block styles %}{% endblock %}
-    </style>
+{% block head %}{% endblock %}
+<style>{% block styles %}{% endblock %}</style>
 </head>
 <body>
-    <header class="site-header">
-        <div class="header-names">
-            Kathy<span class="header-amp">&</span>Ariel
-        </div>
-        <div class="header-divider"></div>
-        <div class="header-date">19 · Diciembre · 2026</div>
-    </header>
 
-    <nav class="site-nav">
-        <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">
-            <span class="nav-icon">💌</span> Invitación
-        </a>
-        <a href="/fotos" class="nav-link {% if request.path == '/fotos' %}active{% endif %}">
-            <span class="nav-icon">📷</span> Fotos
-        </a>
-        <a href="/galeria" class="nav-link {% if request.path == '/galeria' %}active{% endif %}">
-            <span class="nav-icon">🖼️</span> Galería
-        </a>
-    </nav>
-
-    <div class="container">
-        {% block content %}{% endblock %}
+<header class="site-header">
+    <a href="/">
+        <div class="header-names">{{ novia_corto }}<span class="header-amp">&amp;</span>{{ novio_corto }}</div>
+    </a>
+    <div class="rule">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M8 14 V4" stroke="currentColor" stroke-width="1.1" fill="none"/>
+            <ellipse cx="4.6" cy="8" rx="3.4" ry="2" fill="currentColor" opacity=".65" transform="rotate(-28 4.6 8)"/>
+            <ellipse cx="11.4" cy="8" rx="3.4" ry="2" fill="currentColor" opacity=".65" transform="rotate(28 11.4 8)"/>
+            <circle cx="8" cy="3.4" r="2" fill="#eebbbc"/>
+        </svg>
     </div>
+    <div class="header-date">{{ fecha_corta }}</div>
+</header>
 
-    {% block scripts %}{% endblock %}
+<nav class="site-nav" aria-label="Secciones">
+    <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">
+        <span class="nav-icon" aria-hidden="true">💌</span> Invitación
+    </a>
+    <a href="/fotos" class="nav-link {% if request.path == '/fotos' %}active{% endif %}">
+        <span class="nav-icon" aria-hidden="true">📷</span> Fotos
+        {% if not fotos_abiertas %}<span class="nav-lock" aria-label="se habilita el día del evento">🔒</span>{% endif %}
+    </a>
+    <a href="/galeria" class="nav-link {% if request.path == '/galeria' %}active{% endif %}">
+        <span class="nav-icon" aria-hidden="true">🖼️</span> Galería
+        {% if not fotos_abiertas %}<span class="nav-lock" aria-label="se habilita el día del evento">🔒</span>{% endif %}
+    </a>
+    <a href="/regalo" class="nav-link {% if request.path == '/regalo' %}active{% endif %}">
+        <span class="nav-icon" aria-hidden="true">🎁</span> Regalo
+    </a>
+</nav>
+
+<main class="container {% block container_class %}{% endblock %}">
+    {% block content %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+    <p class="sign">Gracias por ser parte</p>
+    <p class="meta">{{ novia_corto }} &amp; {{ novio_corto }} · {{ fecha_larga }}</p>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+// Aviso flotante compartido por todas las páginas.
+function mostrarToast(mensaje, ms = 2200) {
+    const t = document.getElementById('toast');
+    t.textContent = mensaje;
+    t.classList.add('show');
+    clearTimeout(mostrarToast._t);
+    mostrarToast._t = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+// Copia texto al portapapeles con fallback para navegadores viejos.
+async function copiar(texto, aviso = 'Copiado') {
+    try {
+        await navigator.clipboard.writeText(texto);
+    } catch {
+        const ta = document.createElement('textarea');
+        ta.value = texto;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch { mostrarToast('No se pudo copiar'); return false; }
+        finally { ta.remove(); }
+    }
+    mostrarToast(aviso);
+    return true;
+}
+
+// Animación de entrada al hacer scroll.
+(function () {
+    const objetivos = document.querySelectorAll('.reveal');
+    if (!objetivos.length) return;
+    const obs = new IntersectionObserver(
+        entradas => entradas.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); obs.unobserve(e.target); } }),
+        { threshold: 0.12 }
+    );
+    objetivos.forEach(el => obs.observe(el));
+})();
+</script>
+
+{% block scripts %}{% endblock %}
 </body>
 </html>

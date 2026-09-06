@@ -1,299 +1,339 @@
 {% extends "base.html" %}
 
+{% block title %}Galería — {{ novia_corto }} &amp; {{ novio_corto }}{% endblock %}
+
+{% block container_class %}wide{% endblock %}
+
 {% block styles %}
-.gallery-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1.25rem 0 0.75rem;
+.gal-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 1rem; padding-bottom: 1rem;
 }
-.gallery-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.4rem;
-    font-weight: 400;
-    color: var(--text);
+.gal-head h1 {
+    font-family: var(--font-serif); font-size: 1.5rem; font-weight: 400; color: var(--green-800);
 }
-.photo-count {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    background: var(--cream-2);
-    padding: 0.3rem 0.75rem;
-    border-radius: 99px;
-    font-weight: 500;
+.gal-count {
+    font-family: var(--font-caps); font-size: .72rem; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--green-700);
+    background: var(--green-50); border: 1px solid var(--line);
+    padding: .3rem .8rem; border-radius: 99px; white-space: nowrap;
 }
 
-/* Refresh btn */
-.btn-refresh {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.55rem 1rem;
-    background: var(--white);
-    color: var(--text-muted);
-    border: 1.5px solid rgba(78,98,66,.2);
-    border-radius: 10px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    font-family: inherit;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-bottom: 1rem;
-    width: 100%;
-    justify-content: center;
+/* ── Aviso de fotos nuevas ── */
+.nuevas {
+    position: sticky; top: 60px; z-index: 60;
+    display: none; width: 100%; margin-bottom: 1rem;
 }
-.btn-refresh:hover { color: var(--green-d); border-color: var(--green); background: var(--cream-2); }
-.btn-refresh.spinning .refresh-icon { animation: spin 1s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.refresh-icon { display: inline-block; }
-
-/* Masonry gallery */
-.gallery {
-    columns: 2;
-    column-gap: 0.6rem;
-}
-@media (min-width: 480px) { .gallery { columns: 3; } }
-
-.gallery-item {
-    break-inside: avoid;
-    margin-bottom: 0.6rem;
-    border-radius: 12px;
-    overflow: hidden;
-    cursor: pointer;
-    position: relative;
-    background: var(--cream-2);
-    transition: transform 0.2s;
-}
-.gallery-item:active { transform: scale(0.97); }
-.gallery-item img {
-    width: 100%;
-    height: auto;
-    display: block;
-}
-.gallery-item .item-overlay {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 0.6rem 0.5rem 0.4rem;
-    background: linear-gradient(transparent, rgba(30,42,22,.65));
-    color: white;
-    font-size: 0.72rem;
-    opacity: 0;
-    transition: opacity 0.25s;
-}
-.gallery-item:hover .item-overlay { opacity: 1; }
-.item-author { font-weight: 600; }
-.item-desc { opacity: 0.85; margin-top: 0.1rem; }
-
-/* Empty state */
-.empty-state {
-    text-align: center;
-    padding: 3.5rem 1.5rem;
-    background: var(--white);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-}
-.empty-icon { font-size: 3.5rem; margin-bottom: 1rem; }
-.empty-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.25rem;
-    color: var(--text);
-    margin-bottom: 0.5rem;
-}
-.empty-sub { color: var(--text-muted); font-size: 0.9rem; }
-.btn-upload-cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin-top: 1.25rem;
-    padding: 0.7rem 1.4rem;
-    background: linear-gradient(135deg, var(--green-d), var(--green));
-    color: white;
-    border-radius: 10px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    text-decoration: none;
-    box-shadow: 0 4px 14px rgba(54,69,46,.25);
+.nuevas.show { display: block; }
+.nuevas button {
+    width: 100%; min-height: 44px; border: 1px solid var(--rose-200);
+    border-radius: 99px; background: var(--rose-50); color: var(--rose-700);
+    font-family: var(--font-ui); font-size: .88rem; font-weight: 600; cursor: pointer;
+    box-shadow: var(--shadow-sm);
 }
 
-/* Modal */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 200;
-    inset: 0;
-    background: rgba(15,22,12,.95);
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-}
-.modal.show { display: flex; align-items: center; justify-content: center; }
-.modal-inner {
-    position: relative;
-    max-width: 100vw;
-    width: 100%;
-    padding: 1rem;
-}
-.modal-img { width: 100%; height: auto; border-radius: 12px; display: block; }
-.modal-info {
-    background: var(--white);
-    border-radius: 12px;
-    padding: 0.85rem 1rem;
-    margin-top: 0.5rem;
-}
-.modal-author { font-weight: 600; color: var(--text); font-size: 0.95rem; }
-.modal-desc   { color: var(--text-muted); font-size: 0.875rem; margin-top: 0.25rem; }
+/* ── Grilla masonry ── */
+.gal { columns: 2; column-gap: .55rem; }
+@media (min-width: 500px)  { .gal { columns: 3; } }
+@media (min-width: 900px)  { .gal { columns: 4; column-gap: .75rem; } }
+@media (min-width: 1240px) { .gal { columns: 5; } }
 
-.modal-close {
-    position: fixed;
-    top: max(0.85rem, env(safe-area-inset-top));
-    right: max(0.85rem, env(safe-area-inset-right));
-    width: 38px;
-    height: 38px;
-    background: rgba(255,255,255,.15);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    font-size: 1.1rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 201;
-    transition: background 0.2s;
+.gal-item {
+    position: relative; display: block; width: 100%;
+    break-inside: avoid; margin: 0 0 .55rem;
+    padding: 0; border: 0; border-radius: var(--radius-xs);
+    overflow: hidden; background: var(--green-100); cursor: zoom-in;
+    box-shadow: var(--shadow-sm);
+    transition: transform .18s, box-shadow .25s;
 }
-.modal-close:hover { background: rgba(255,255,255,.25); }
+.gal-item:active { transform: scale(.975); }
+.gal-item:hover { box-shadow: var(--shadow); }
+.gal-item img { width: 100%; height: auto; display: block; }
+.gal-item .pie {
+    position: absolute; inset: auto 0 0 0;
+    padding: 1.4rem .55rem .45rem;
+    background: linear-gradient(transparent, rgba(40, 52, 34, .72));
+    color: #fff; text-align: left;
+    font-family: var(--font-ui); font-size: .72rem; line-height: 1.3;
+}
+.gal-item .autor { font-weight: 600; }
+.gal-item .desc {
+    opacity: .88; margin-top: .1rem;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    line-clamp: 2; overflow: hidden;
+}
 
-.modal-nav {
-    position: fixed;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(255,255,255,.12);
-    color: white;
-    border: none;
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    font-size: 1.4rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 201;
-    transition: background 0.2s;
+/* ── Vacío ── */
+.vacio {
+    text-align: center; padding: 3.5rem 1.5rem;
+    background: var(--white); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow-sm);
 }
-.modal-nav:hover { background: rgba(255,255,255,.22); }
-.modal-nav.prev { left: 0.5rem; }
-.modal-nav.next { right: 0.5rem; }
+.vacio .emoji { font-size: 3rem; }
+.vacio h2 {
+    font-family: var(--font-serif); font-size: 1.35rem; font-weight: 400;
+    color: var(--green-800); margin: .9rem 0 .4rem;
+}
+.vacio p { color: var(--muted); font-size: .94rem; }
+.vacio .btn { margin-top: 1.5rem; }
+
+/* ── Lightbox ── */
+.lb {
+    position: fixed; inset: 0; z-index: 200; display: none;
+    background: rgba(28, 36, 24, .96);
+    flex-direction: column;
+}
+.lb.show { display: flex; }
+.lb-fig {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    padding: max(3.5rem, calc(env(safe-area-inset-top) + 3rem)) .75rem .75rem;
+    min-height: 0;
+}
+.lb-fig img {
+    max-width: 100%; max-height: 100%; width: auto; height: auto;
+    object-fit: contain; border-radius: 6px;
+}
+.lb-info {
+    padding: .9rem 1.1rem calc(1.1rem + env(safe-area-inset-bottom));
+    color: #f2f5ee; text-align: center;
+    background: linear-gradient(transparent, rgba(0, 0, 0, .35));
+}
+.lb-autor { font-weight: 600; font-size: .95rem; }
+.lb-desc  { font-size: .88rem; opacity: .82; margin-top: .2rem; }
+.lb-meta  {
+    font-family: var(--font-caps); font-size: .66rem; letter-spacing: .2em;
+    text-transform: uppercase; opacity: .55; margin-top: .55rem;
+}
+.lb-descargar {
+    display: inline-block; margin-top: .75rem; color: #f2f5ee; text-decoration: none;
+    font-family: var(--font-caps); font-size: .68rem; letter-spacing: .2em;
+    text-transform: uppercase; border-bottom: 1px solid rgba(238, 187, 188, .6);
+    padding-bottom: 2px;
+}
+
+.lb-btn {
+    position: absolute; z-index: 210;
+    display: flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; border: none; border-radius: 50%;
+    background: rgba(255, 255, 255, .14); color: #fff;
+    font-size: 1.2rem; cursor: pointer; transition: background .2s;
+}
+.lb-btn:hover { background: rgba(255, 255, 255, .26); }
+.lb-cerrar { top: max(.8rem, env(safe-area-inset-top)); right: max(.8rem, env(safe-area-inset-right)); }
+.lb-prev   { top: 50%; left: .6rem;  transform: translateY(-50%); }
+.lb-next   { top: 50%; right: .6rem; transform: translateY(-50%); }
+@media (max-width: 420px) { .lb-prev, .lb-next { display: none; } }
+
+.vista-previa-aviso {
+    margin-bottom: 1rem; padding: .7rem 1rem; border-radius: var(--radius-xs);
+    background: var(--rose-50); border: 1px solid var(--rose-200);
+    color: var(--rose-700); font-size: .82rem; text-align: center;
+}
 {% endblock %}
 
 {% block content %}
-<div class="gallery-header">
-    <div class="gallery-title">Álbum compartido</div>
-    <span class="photo-count">
-        📷 {{ fotos|length }} foto{{ 's' if fotos|length != 1 else '' }}
-    </span>
+{% if vista_previa and not fotos_abiertas %}
+<p class="vista-previa-aviso">👀 Vista previa de los novios — para el resto todavía está cerrada.</p>
+{% endif %}
+
+<div class="gal-head">
+    <h1>Álbum compartido</h1>
+    <span class="gal-count" id="contador">{{ fotos|length }} foto{{ '' if fotos|length == 1 else 's' }}</span>
 </div>
 
-<button class="btn-refresh" id="refreshBtn" onclick="refreshGallery()">
-    <span class="refresh-icon">↻</span> Actualizar
-</button>
+<div class="nuevas" id="avisoNuevas">
+    <button type="button" id="btnNuevas">↑ Hay fotos nuevas — tocá para verlas</button>
+</div>
 
 {% if fotos %}
-<div class="gallery" id="gallery">
+<div class="gal" id="gal">
     {% for foto in fotos %}
-    {% set thumb = foto.thumbnail or foto.ruta %}
-    <div class="gallery-item" onclick="openModal({{ loop.index0 }})">
-        <img src="{{ thumb if '://' in thumb else '/' + thumb }}" alt="Foto de {{ foto.subido_por }}" loading="lazy">
-        <div class="item-overlay">
-            <div class="item-author">{{ foto.subido_por }}</div>
-            {% if foto.descripcion %}<div class="item-desc">{{ foto.descripcion }}</div>{% endif %}
-        </div>
-    </div>
+    <button class="gal-item" type="button" data-idx="{{ loop.index0 }}"
+            aria-label="Ampliar foto de {{ foto.subido_por }}">
+        <img src="{{ foto.thumbnail if '://' in foto.thumbnail else '/' + foto.thumbnail }}"
+             alt="Foto subida por {{ foto.subido_por }}" loading="lazy" decoding="async">
+        <span class="pie">
+            <span class="autor">{{ foto.subido_por }}</span>
+            {% if foto.descripcion %}<span class="desc">{{ foto.descripcion }}</span>{% endif %}
+        </span>
+    </button>
     {% endfor %}
 </div>
 {% else %}
-<div class="empty-state">
-    <div class="empty-icon">🌸</div>
-    <div class="empty-title">Todavía no hay fotos</div>
-    <p class="empty-sub">¡Sé el primero en compartir un momento!</p>
-    <a href="/" class="btn-upload-cta">📷 Subir fotos</a>
+<div class="vacio" id="vacio">
+    <div class="emoji" aria-hidden="true">🌸</div>
+    <h2>El álbum está esperando</h2>
+    <p>Todavía nadie subió una foto. Podés ser quien lo estrene.</p>
+    <a class="btn btn-primary" href="/fotos">📷 Subir la primera</a>
 </div>
 {% endif %}
 
-<!-- Modal lightbox -->
-<div class="modal" id="modal" onclick="handleModalClick(event)">
-    <button class="modal-close" onclick="closeModal()">✕</button>
-    <button class="modal-nav prev" onclick="navigate(-1); event.stopPropagation()">‹</button>
-    <button class="modal-nav next" onclick="navigate(1); event.stopPropagation()">›</button>
-    <div class="modal-inner" onclick="event.stopPropagation()">
-        <img id="modalImg" class="modal-img" src="" alt="Foto">
-        <div class="modal-info">
-            <div class="modal-author" id="modalAuthor"></div>
-            <div class="modal-desc" id="modalDesc" style="display:none"></div>
-        </div>
+<!-- Lightbox -->
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Foto ampliada">
+    <button class="lb-btn lb-cerrar" type="button" id="lbCerrar" aria-label="Cerrar">✕</button>
+    <button class="lb-btn lb-prev"   type="button" id="lbPrev"   aria-label="Foto anterior">‹</button>
+    <button class="lb-btn lb-next"   type="button" id="lbNext"   aria-label="Foto siguiente">›</button>
+    <div class="lb-fig"><img id="lbImg" src="" alt=""></div>
+    <div class="lb-info">
+        <div class="lb-autor" id="lbAutor"></div>
+        <div class="lb-desc"  id="lbDesc"></div>
+        <div class="lb-meta"  id="lbMeta"></div>
+        <a class="lb-descargar" id="lbDescargar" href="#" target="_blank" rel="noopener">Abrir original</a>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<script id="datosFotos" type="application/json">{{ fotos|tojson }}</script>
 <script>
-const fotos = [
-    {% for foto in fotos %}
-    {% set ruta = foto.ruta %}
-    { ruta: '{{ ruta if "://" in ruta else "/" + ruta }}', autor: '{{ foto.subido_por | replace("'", "\\'") }}', desc: '{{ (foto.descripcion or "") | replace("'", "\\'") }}' },
-    {% endfor %}
-];
+(function () {
+    'use strict';
 
-let currentIdx = 0;
+    const $ = id => document.getElementById(id);
+    let fotos = JSON.parse($('datosFotos').textContent);
 
-function openModal(idx) {
-    currentIdx = idx;
-    renderModal();
-    document.getElementById('modal').classList.add('show');
-    document.body.style.overflow = 'hidden';
-}
+    const url = f => (f && f.includes('://')) ? f : '/' + f;
 
-function renderModal() {
-    const f = fotos[currentIdx];
-    document.getElementById('modalImg').src = f.ruta;
-    document.getElementById('modalAuthor').textContent = '👤 ' + f.autor;
-    const desc = document.getElementById('modalDesc');
-    if (f.desc) { desc.textContent = '💬 ' + f.desc; desc.style.display = 'block'; }
-    else { desc.style.display = 'none'; }
-}
+    // ── Lightbox ────────────────────────────────────────────────────────────
+    const lb = $('lb'), lbImg = $('lbImg');
+    let idx = 0, abierto = false, ultimoFoco = null;
 
-function navigate(dir) {
-    currentIdx = (currentIdx + dir + fotos.length) % fotos.length;
-    renderModal();
-}
+    function pintar() {
+        const f = fotos[idx];
+        if (!f) return;
+        lbImg.src = url(f.ruta);
+        lbImg.alt = 'Foto subida por ' + f.subido_por;
+        $('lbAutor').textContent = f.subido_por || 'Invitado';
+        $('lbDesc').textContent = f.descripcion || '';
+        $('lbDesc').style.display = f.descripcion ? 'block' : 'none';
+        $('lbMeta').textContent = `${idx + 1} de ${fotos.length}${f.cuando ? ' · ' + f.cuando : ''}`;
+        $('lbDescargar').href = url(f.ruta);
 
-function closeModal() {
-    document.getElementById('modal').classList.remove('show');
-    document.body.style.overflow = '';
-}
+        // Precarga los vecinos para que pasar fotos sea instantáneo.
+        for (const salto of [1, -1]) {
+            const vecina = fotos[(idx + salto + fotos.length) % fotos.length];
+            if (vecina) new Image().src = url(vecina.ruta);
+        }
+    }
 
-function handleModalClick(e) {
-    if (e.target === document.getElementById('modal')) closeModal();
-}
+    function abrir(i) {
+        idx = i; abierto = true; ultimoFoco = document.activeElement;
+        pintar();
+        lb.classList.add('show');
+        document.body.style.overflow = 'hidden';
+        $('lbCerrar').focus();
+    }
 
-document.addEventListener('keydown', e => {
-    if (!document.getElementById('modal').classList.contains('show')) return;
-    if (e.key === 'Escape')      closeModal();
-    if (e.key === 'ArrowLeft')   navigate(-1);
-    if (e.key === 'ArrowRight')  navigate(1);
-});
+    function cerrar() {
+        abierto = false;
+        lb.classList.remove('show');
+        lbImg.src = '';
+        document.body.style.overflow = '';
+        if (ultimoFoco) ultimoFoco.focus();
+    }
 
-let touchStartX = 0;
-document.getElementById('modal').addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
-document.getElementById('modal').addEventListener('touchend',   e => {
-    const diff = touchStartX - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 50) navigate(diff > 0 ? 1 : -1);
-});
+    function mover(paso) {
+        if (fotos.length < 2) return;
+        idx = (idx + paso + fotos.length) % fotos.length;
+        pintar();
+    }
 
-function refreshGallery() {
-    const btn = document.getElementById('refreshBtn');
-    btn.classList.add('spinning');
-    setTimeout(() => location.reload(), 300);
-}
+    $('lbCerrar').addEventListener('click', cerrar);
+    $('lbPrev').addEventListener('click', () => mover(-1));
+    $('lbNext').addEventListener('click', () => mover(1));
+    lb.addEventListener('click', e => { if (e.target === lb || e.target.classList.contains('lb-fig')) cerrar(); });
+
+    document.addEventListener('keydown', e => {
+        if (!abierto) return;
+        if (e.key === 'Escape') cerrar();
+        else if (e.key === 'ArrowLeft') mover(-1);
+        else if (e.key === 'ArrowRight') mover(1);
+    });
+
+    // Deslizar para pasar de foto.
+    let x0 = null, y0 = null;
+    lb.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+    lb.addEventListener('touchend', e => {
+        if (x0 === null) return;
+        const dx = e.changedTouches[0].clientX - x0;
+        const dy = e.changedTouches[0].clientY - y0;
+        if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy)) mover(dx < 0 ? 1 : -1);
+        else if (dy > 90 && Math.abs(dy) > Math.abs(dx)) cerrar();
+        x0 = y0 = null;
+    }, { passive: true });
+
+    // ── Grilla ──────────────────────────────────────────────────────────────
+    const gal = $('gal');
+    if (gal) {
+        gal.addEventListener('click', e => {
+            const item = e.target.closest('.gal-item');
+            if (item) abrir(Number(item.dataset.idx));
+        });
+    }
+
+    function tarjeta(f, i) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'gal-item';
+        btn.dataset.idx = i;
+        btn.setAttribute('aria-label', 'Ampliar foto de ' + (f.subido_por || 'Invitado'));
+
+        const img = document.createElement('img');
+        img.src = url(f.thumbnail || f.ruta);
+        img.alt = 'Foto subida por ' + (f.subido_por || 'Invitado');
+        img.loading = 'lazy';
+        img.decoding = 'async';
+
+        const pie = document.createElement('span');
+        pie.className = 'pie';
+        const autor = document.createElement('span');
+        autor.className = 'autor';
+        autor.textContent = f.subido_por || 'Invitado';
+        pie.appendChild(autor);
+        if (f.descripcion) {
+            const desc = document.createElement('span');
+            desc.className = 'desc';
+            desc.textContent = f.descripcion;
+            pie.appendChild(desc);
+        }
+
+        btn.append(img, pie);
+        return btn;
+    }
+
+    // ── Fotos nuevas en vivo ────────────────────────────────────────────────
+    const aviso = $('avisoNuevas');
+    let pendientes = null;
+
+    async function buscarNuevas() {
+        if (document.hidden || abierto) return;
+        try {
+            const r = await fetch('/api/fotos', { cache: 'no-store' });
+            if (!r.ok) return;
+            const frescas = await r.json();
+            if (frescas.length > fotos.length) { pendientes = frescas; aviso.classList.add('show'); }
+        } catch { /* sin conexión: reintenta en el próximo ciclo */ }
+    }
+    setInterval(buscarNuevas, 25000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) buscarNuevas(); });
+
+    $('btnNuevas').addEventListener('click', () => {
+        if (!pendientes) return;
+        fotos = pendientes;
+        pendientes = null;
+        aviso.classList.remove('show');
+
+        const vacio = $('vacio');
+        if (vacio) { location.reload(); return; }   // no había grilla que actualizar
+
+        const frag = document.createDocumentFragment();
+        fotos.forEach((f, i) => frag.appendChild(tarjeta(f, i)));
+        gal.replaceChildren(frag);
+
+        $('contador').textContent = fotos.length === 1 ? '1 foto' : `${fotos.length} fotos`;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        mostrarToast('Galería actualizada');
+    });
+})();
 </script>
 {% endblock %}
