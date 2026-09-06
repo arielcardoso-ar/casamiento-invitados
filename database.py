@@ -141,8 +141,34 @@ class CasamientoDatabase:
             )
         ''')
 
+        # Confirmaciones de asistencia hechas desde la invitación
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS confirmaciones (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nombre TEXT NOT NULL,
+                asiste INTEGER DEFAULT 1,
+                acompanantes INTEGER DEFAULT 0,
+                restricciones TEXT,
+                mensaje TEXT,
+                fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # Marcas de la réplica en Google. Se agregan aparte porque estas tablas
+        # ya existen en bases viejas y CREATE TABLE IF NOT EXISTS no las toca.
+        self._asegurar_columna(cursor, 'fotos', 'drive_link', 'TEXT')
+        self._asegurar_columna(cursor, 'canciones', 'replicado', 'INTEGER DEFAULT 0')
+        self._asegurar_columna(cursor, 'confirmaciones', 'replicado', 'INTEGER DEFAULT 0')
+
         conn.commit()
         conn.close()
+
+    @staticmethod
+    def _asegurar_columna(cursor, tabla, columna, tipo):
+        """Agrega la columna si falta. Hace las veces de migración."""
+        existentes = {fila[1] for fila in cursor.execute(f'PRAGMA table_info({tabla})')}
+        if columna not in existentes:
+            cursor.execute(f'ALTER TABLE {tabla} ADD COLUMN {columna} {tipo}')
     
     # ========== PRESUPUESTO ==========
     
@@ -539,6 +565,72 @@ class CasamientoDatabase:
         total = conn.execute('SELECT COUNT(*) FROM canciones').fetchone()[0]
         conn.close()
         return total
+
+    # ========== CONFIRMACIONES ==========
+
+    def agregar_confirmacion(self, datos):
+        """Guardar una confirmación de asistencia; devuelve su ID."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO confirmaciones
+                (nombre, asiste, acompanantes, restricciones, mensaje)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (
+            datos['nombre'],
+            1 if datos.get('asiste', True) else 0,
+            int(datos.get('acompanantes') or 0),
+            datos.get('restricciones', ''),
+            datos.get('mensaje', ''),
+        ))
+        confirmacion_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return confirmacion_id
+
+    def get_confirmaciones(self):
+        conn = self.get_connection()
+        filas = conn.execute(
+            'SELECT id, nombre, asiste, acompanantes, restricciones, mensaje, fecha '
+            'FROM confirmaciones ORDER BY fecha DESC, id DESC').fetchall()
+        conn.close()
+        return [dict(f) for f in filas]
+
+    # ========== RÉPLICA EN GOOGLE ==========
+
+    def marcar_replicado(self, tipo, fila_id, link=''):
+        """Deja constancia de que la fila ya viajó a Google."""
+        conn = self.get_connection()
+        if tipo == 'foto':
+            conn.execute('UPDATE fotos SET drive_link = ? WHERE id = ?',
+                         (link or 'ok', fila_id))
+        elif tipo == 'cancion':
+            conn.execute('UPDATE canciones SET replicado = 1 WHERE id = ?', (fila_id,))
+        elif tipo == 'confirmacion':
+            conn.execute('UPDATE confirmaciones SET replicado = 1 WHERE id = ?',
+                         (fila_id,))
+        conn.commit()
+        conn.close()
+
+    def pendientes_de_replica(self):
+        """Lo que todavía no llegó a Google, para reintentarlo."""
+        conn = self.get_connection()
+        pendientes = {
+            'fotos': [dict(f) for f in conn.execute(
+                'SELECT id, ruta, nombre_original, subido_por, descripcion, fecha_subida '
+                'FROM fotos WHERE drive_link IS NULL OR drive_link = "" '
+                'ORDER BY id').fetchall()],
+            'canciones': [dict(f) for f in conn.execute(
+                'SELECT id, titulo, artista, sugerido_por, fecha '
+                'FROM canciones WHERE replicado IS NULL OR replicado = 0 '
+                'ORDER BY id').fetchall()],
+            'confirmaciones': [dict(f) for f in conn.execute(
+                'SELECT id, nombre, asiste, acompanantes, restricciones, mensaje, fecha '
+                'FROM confirmaciones WHERE replicado IS NULL OR replicado = 0 '
+                'ORDER BY id').fetchall()],
+        }
+        conn.close()
+        return pendientes
 
 
 if __name__ == '__main__':

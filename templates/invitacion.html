@@ -410,6 +410,34 @@
     }
     .rsvp .btn { margin-top: 1.9rem; font-family: var(--font-caps); font-size: .8rem; letter-spacing: .22em; text-transform: uppercase; padding: 1rem 2.4rem; }
     .rsvp .deadline { margin-top: 1.1rem; font-size: .9rem; color: var(--muted); font-family: var(--font-ui); }
+    .rsvp-form { max-width: 420px; margin: 1.9rem auto 0; display: grid; gap: .65rem; text-align: left; }
+    .rsvp-form .btn { margin-top: .4rem; }
+    /* Dos botones que se excluyen: el que está elegido se pinta. */
+    .rsvp-asiste { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+    .rsvp-asiste input { position: absolute; opacity: 0; pointer-events: none; }
+    .rsvp-asiste label {
+        display: flex; align-items: center; justify-content: center; gap: .35rem;
+        min-height: 48px; padding: .7rem .5rem; cursor: pointer;
+        border: 1.5px solid var(--line); border-radius: var(--radius-xs);
+        background: var(--paper); color: var(--ink-soft);
+        font-family: var(--font-ui); font-size: .94rem; font-weight: 600;
+        transition: background .2s, border-color .2s, color .2s;
+    }
+    .rsvp-asiste input:checked + label {
+        background: var(--green-50); border-color: var(--green-400); color: var(--green-800);
+    }
+    .rsvp-asiste input:focus-visible + label { outline: 2px solid var(--green-500); outline-offset: 2px; }
+    .rsvp-extra { display: grid; gap: .65rem; }
+    .rsvp-estado {
+        min-height: 1.5rem; text-align: center; font-family: var(--font-ui);
+        font-size: .92rem; font-weight: 600; color: var(--green-700);
+    }
+    .rsvp-estado.error { color: var(--rose-700); }
+    .rsvp-otra {
+        text-align: center; margin-top: 1.4rem;
+        font-family: var(--font-ui); font-size: .88rem; color: var(--muted);
+    }
+    .rsvp-otra a { color: var(--green-700); }
 
     /* ══ Canción para la playlist ═══════════════════════════════════════════ */
     .cancion { background: var(--white); text-align: center; }
@@ -817,9 +845,42 @@
     <h2 class="kicker-script reveal">Confirmá tu lugar</h2>
     <div class="reveal d1">
         <p class="lead">Tu presencia es nuestro mejor regalo.<br>Avisanos si venís así reservamos tu silla.</p>
-        <p class="contact">{{ rsvp_telefono }} · {{ rsvp_nombre }}</p>
-        <a class="btn btn-primary" href="{{ rsvp_url }}" target="_blank" rel="noopener">Confirmar por WhatsApp</a>
-        <p class="deadline">También podés escribirnos por mensaje si preferís.</p>
+
+        <form class="rsvp-form" id="formRsvp" novalidate>
+            <input class="input-field" id="rsvpNombre" maxlength="80" required
+                   autocomplete="name" placeholder="Tu nombre y apellido"
+                   aria-label="Tu nombre y apellido">
+
+            <div class="rsvp-asiste">
+                <input type="radio" name="asiste" id="rsvpSi" value="1" checked>
+                <label for="rsvpSi">🌿 Ahí estaré</label>
+                <input type="radio" name="asiste" id="rsvpNo" value="0">
+                <label for="rsvpNo">No voy a poder</label>
+            </div>
+
+            <div class="rsvp-extra" id="rsvpExtra">
+                <input class="input-field" id="rsvpAcomp" type="number" min="0" max="20"
+                       inputmode="numeric" placeholder="¿Cuántos te acompañan? (0 si venís solo)"
+                       aria-label="Cuántas personas te acompañan">
+                <input class="input-field" id="rsvpRestric" maxlength="200"
+                       placeholder="¿Alguna restricción con la comida?"
+                       aria-label="Restricciones con la comida">
+            </div>
+
+            <input class="input-field" id="rsvpMensaje" maxlength="400"
+                   placeholder="Dejanos un mensaje (opcional)" aria-label="Un mensaje para los novios">
+
+            <button type="submit" class="btn btn-primary btn-block" id="btnRsvp">
+                <span id="btnRsvpTexto">Confirmar</span>
+            </button>
+            <p class="rsvp-estado" id="rsvpEstado" role="status"></p>
+        </form>
+
+        <p class="rsvp-otra">
+            ¿Preferís avisarnos por mensaje?
+            <a href="{{ rsvp_url }}" target="_blank" rel="noopener">Escribinos por WhatsApp</a>
+            · {{ rsvp_telefono }}
+        </p>
     </div>
 </section>
 
@@ -906,6 +967,70 @@
         } else {
             polaroids.forEach(colgar);   // sin observer, mejor verlas que no verlas
         }
+    }
+
+    // ── Confirmación de asistencia ──────────────────────────────────────────
+    const formRsvp = document.getElementById('formRsvp');
+    if (formRsvp) {
+        const CLAVE_NOMBRE = 'ka:nombre';
+        const nombre  = document.getElementById('rsvpNombre');
+        const si      = document.getElementById('rsvpSi');
+        const extra   = document.getElementById('rsvpExtra');
+        const estado  = document.getElementById('rsvpEstado');
+        const boton   = document.getElementById('btnRsvp');
+        const texto   = document.getElementById('btnRsvpTexto');
+
+        try { nombre.value = localStorage.getItem(CLAVE_NOMBRE) || ''; } catch {}
+
+        // Si no viene, preguntarle cuántos lo acompañan no tiene sentido.
+        const ajustarExtra = () => { extra.hidden = !si.checked; };
+        formRsvp.querySelectorAll('input[name=asiste]')
+            .forEach(r => r.addEventListener('change', ajustarExtra));
+        ajustarExtra();
+
+        formRsvp.addEventListener('submit', async e => {
+            e.preventDefault();
+            if (!nombre.value.trim()) {
+                estado.className = 'rsvp-estado error';
+                estado.textContent = 'Decinos tu nombre así sabemos quién sos.';
+                nombre.focus();
+                return;
+            }
+
+            boton.disabled = true;
+            texto.textContent = 'Confirmando…';
+            estado.className = 'rsvp-estado';
+            estado.textContent = '';
+
+            try {
+                const r = await fetch('/api/confirmaciones', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nombre: nombre.value.trim(),
+                        asiste: si.checked ? 1 : 0,
+                        acompanantes: document.getElementById('rsvpAcomp').value || 0,
+                        restricciones: document.getElementById('rsvpRestric').value.trim(),
+                        mensaje: document.getElementById('rsvpMensaje').value.trim(),
+                    }),
+                });
+                const d = await r.json();
+                if (!d.success) throw new Error(d.message || 'error');
+
+                try { localStorage.setItem(CLAVE_NOMBRE, nombre.value.trim()); } catch {}
+                estado.className = 'rsvp-estado';
+                estado.textContent = d.asiste
+                    ? '¡Listo! Te esperamos 🌿'
+                    : 'Gracias por avisarnos. Te vamos a extrañar.';
+                texto.textContent = 'Cambiar mi respuesta';
+            } catch (err) {
+                estado.className = 'rsvp-estado error';
+                estado.textContent = 'No se pudo confirmar. Revisá la conexión y probá de nuevo.';
+                texto.textContent = 'Confirmar';
+            } finally {
+                boton.disabled = false;
+            }
+        });
     }
 
     // ── Canción para la playlist ────────────────────────────────────────────

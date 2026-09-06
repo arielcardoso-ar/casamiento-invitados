@@ -25,6 +25,7 @@ from flask import (Flask, jsonify, redirect, render_template, request,
 from werkzeug.utils import secure_filename
 
 import config
+import google_sync
 from database import CasamientoDatabase
 
 # HEIC/HEIF de iPhone: sin esto Pillow no puede abrirlos en el modo local.
@@ -72,6 +73,10 @@ if CLOUDINARY_ENABLED:
     )
 
 db = CasamientoDatabase()
+
+# Réplica en Drive/Sheets. Si no hay credenciales cargadas no arranca nada y el
+# sitio funciona igual: es un espejo, no una dependencia.
+google_sync.iniciar(al_terminar=db.marcar_replicado)
 
 
 # ── Apertura de la galería ────────────────────────────────────────────────────
@@ -342,7 +347,7 @@ def _procesar(archivo, subido_por: str, descripcion: str) -> int:
     else:
         urls = _guardar_local(datos, archivo.filename)
 
-    return db.agregar_foto({
+    foto_id = db.agregar_foto({
         'nombre_archivo': urls['nombre_archivo'],
         'nombre_original': archivo.filename,
         'ruta': urls['ruta'],
@@ -350,6 +355,27 @@ def _procesar(archivo, subido_por: str, descripcion: str) -> int:
         'subido_por': subido_por,
         'descripcion': descripcion,
     })
+
+    google_sync.encolar(
+        'foto', id=foto_id, ruta=urls['ruta'],
+        nombre=_nombre_para_drive(archivo.filename, subido_por),
+        tipo_mime=_tipo_mime(urls['ruta']),
+        cuando=config.ahora().strftime('%d/%m/%Y %H:%M'),
+        subido_por=subido_por, descripcion=descripcion)
+    return foto_id
+
+
+def _nombre_para_drive(nombre_original, subido_por):
+    """Nombre legible en Drive: se ordenan solas y se ve quién la sacó."""
+    sello = config.ahora().strftime('%Y-%m-%d %H.%M.%S')
+    limpio = secure_filename(nombre_original or 'foto.jpg') or 'foto.jpg'
+    return f'{sello} — {subido_por} — {limpio}'
+
+
+def _tipo_mime(ruta):
+    extension = ruta.rsplit('.', 1)[-1].lower() if '.' in ruta else 'jpg'
+    return {'png': 'image/png', 'gif': 'image/gif', 'webp': 'image/webp',
+            'heic': 'image/heic', 'heif': 'image/heif'}.get(extension, 'image/jpeg')
 
 
 @app.route('/api/fotos/upload', methods=['POST'])
@@ -400,10 +426,14 @@ def api_sugerir_cancion():
         return jsonify({'success': False, 'message': 'Falta el nombre del tema'}), 400
 
     try:
-        db.agregar_cancion(titulo, artista, sugerido_por)
+        cancion_id = db.agregar_cancion(titulo, artista, sugerido_por)
     except Exception:
         app.logger.exception('Error guardando la canción')
         return jsonify({'success': False, 'message': 'No se pudo guardar. Probá de nuevo.'}), 500
+
+    google_sync.encolar('cancion', id=cancion_id, titulo=titulo, artista=artista,
+                        sugerido_por=sugerido_por,
+                        cuando=config.ahora().strftime('%d/%m/%Y %H:%M'))
 
     return jsonify({'success': True, 'total': db.contar_canciones()})
 
@@ -411,6 +441,113 @@ def api_sugerir_cancion():
 @app.route('/api/canciones/total')
 def api_total_canciones():
     return jsonify({'total': db.contar_canciones()})
+
+
+# ── Confirmaciones de asistencia ──────────────────────────────────────────────
+
+@app.route('/api/confirmaciones', methods=['POST'])
+def api_confirmar():
+    datos = request.get_json(silent=True) or request.form
+    nombre = (datos.get('nombre') or '').strip()[:80]
+    if not nombre:
+        return jsonify({'success': False, 'message': 'Falta tu nombre'}), 400
+
+    asiste = str(datos.get('asiste', '1')).lower() not in ('0', 'false', 'no')
+    try:
+        acompanantes = max(0, min(20, int(datos.get('acompanantes') or 0)))
+    except (TypeError, ValueError):
+        acompanantes = 0
+
+    registro = {
+        'nombre': nombre,
+        'asiste': asiste,
+        'acompanantes': acompanantes if asiste else 0,
+        'restricciones': (datos.get('restricciones') or '').strip()[:200],
+        'mensaje': (datos.get('mensaje') or '').strip()[:400],
+    }
+
+    try:
+        confirmacion_id = db.agregar_confirmacion(registro)
+    except Exception:
+        app.logger.exception('Error guardando la confirmación')
+        return jsonify({'success': False,
+                        'message': 'No se pudo guardar. Probá de nuevo.'}), 500
+
+    google_sync.encolar('confirmacion', id=confirmacion_id,
+                        cuando=config.ahora().strftime('%d/%m/%Y %H:%M'),
+                        nombre=nombre,
+                        asiste='Sí' if asiste else 'No',
+                        acompanantes=registro['acompanantes'],
+                        restricciones=registro['restricciones'],
+                        mensaje=registro['mensaje'])
+
+    return jsonify({'success': True, 'asiste': asiste})
+
+
+@app.route('/admin/confirmaciones')
+def admin_confirmaciones():
+    """La lista de confirmaciones. Protegida con ?secret=<ADMIN_SECRET>."""
+    if not ADMIN_SECRET or request.args.get('secret') != ADMIN_SECRET:
+        return jsonify({'error': 'Forbidden'}), 403
+
+    confirmaciones = db.get_confirmaciones()
+    for confirmacion in confirmaciones:
+        confirmacion['cuando'] = _hora_local(confirmacion.get('fecha'))
+
+    vienen = [c for c in confirmaciones if c['asiste']]
+    return render_template('confirmaciones.html',
+                           confirmaciones=confirmaciones,
+                           total_personas=sum(1 + c['acompanantes'] for c in vienen),
+                           total_si=len(vienen),
+                           total_no=len(confirmaciones) - len(vienen))
+
+
+# ── Réplica en Google ─────────────────────────────────────────────────────────
+
+@app.route('/admin/google')
+def admin_google():
+    """
+    Estado del espejo en Drive y reintento de lo que quedó pendiente.
+    `?reintentar=1` vuelve a encolar todo lo que todavía no llegó.
+    """
+    if not ADMIN_SECRET or request.args.get('secret') != ADMIN_SECRET:
+        return jsonify({'error': 'Forbidden'}), 403
+
+    pendientes = db.pendientes_de_replica()
+    respuesta = {
+        'google': google_sync.estado(),
+        'pendientes': {k: len(v) for k, v in pendientes.items()},
+    }
+
+    if request.args.get('reintentar') and google_sync.configurado():
+        encolados = 0
+        for foto in pendientes['fotos']:
+            encolados += bool(google_sync.encolar(
+                'foto', id=foto['id'], ruta=foto['ruta'],
+                nombre=_nombre_para_drive(foto['nombre_original'],
+                                          foto['subido_por'] or 'Invitado'),
+                tipo_mime=_tipo_mime(foto['ruta']),
+                cuando=_hora_local(foto['fecha_subida']),
+                subido_por=foto['subido_por'] or 'Invitado',
+                descripcion=foto['descripcion'] or ''))
+        for cancion in pendientes['canciones']:
+            encolados += bool(google_sync.encolar(
+                'cancion', id=cancion['id'], titulo=cancion['titulo'],
+                artista=cancion['artista'] or '',
+                sugerido_por=cancion['sugerido_por'] or '',
+                cuando=_hora_local(cancion['fecha'])))
+        for confirmacion in pendientes['confirmaciones']:
+            encolados += bool(google_sync.encolar(
+                'confirmacion', id=confirmacion['id'],
+                cuando=_hora_local(confirmacion['fecha']),
+                nombre=confirmacion['nombre'],
+                asiste='Sí' if confirmacion['asiste'] else 'No',
+                acompanantes=confirmacion['acompanantes'],
+                restricciones=confirmacion['restricciones'] or '',
+                mensaje=confirmacion['mensaje'] or ''))
+        respuesta['reencolados'] = encolados
+
+    return jsonify(respuesta)
 
 
 @app.route('/admin/canciones')

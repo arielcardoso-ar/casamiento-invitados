@@ -30,3 +30,17 @@ services:
       # - key: MP_CVU
       # - key: MP_LINK       # link de cobro; con esto el sitio arma el QR de pago
       # - key: MP_QR_IMG     # o el QR oficial de la app (archivo en static/ o URL)
+
+      # ── Réplica en tu Google Drive (opcional) ──
+      # El token lo genera scripts/autorizar_google.py. Sin estas variables el
+      # sitio anda igual: simplemente no espeja nada.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REFRESH_TOKEN
+        sync: false
+      - key: DRIVE_FOLDER_ID      # carpeta donde caen las fotos
+        sync: false
+      - key: SHEET_ID             # planilla de canciones y confirmaciones
+        sync: false

@@ -11,15 +11,20 @@ Sitio público del casamiento. Cuatro cosas, ninguna más:
 | `/galeria` | Álbum compartido con todo lo que suben. **Cerrado hasta el evento.** |
 | `/regalo` | Alias de Mercado Pago con copiado en un toque. |
 
-Y dentro de la invitación, un bloque para que los invitados **sugieran una
-canción** para la playlist. Ese sí está abierto desde ahora: la gracia es llegar
-a la fiesta con la lista armada.
+Y dentro de la invitación, dos bloques abiertos desde ahora (no esperan al
+evento): **confirmar asistencia** y **sugerir una canción** para la playlist.
+
+Todo lo que dejan los invitados —fotos, canciones y confirmaciones— se replica
+en tu Google Drive. Ver *La réplica en Drive*, más abajo.
 
 Extras para los novios, todos detrás de `?secret=<ADMIN_SECRET>`:
 
+- `/admin/confirmaciones` — quiénes vienen, cuántos son en total y qué comen.
 - `/admin/canciones` — la playlist que van sugiriendo, agrupada por tema y
   ordenada por cuántas veces la pidieron, con un botón que copia la lista
   entera en formato `tema - artista` para pegarla en el buscador de Spotify.
+- `/admin/google` — estado de la réplica en Drive y qué quedó pendiente.
+  Con `&reintentar=1` reencola todo lo que todavía no llegó.
 - `/admin/sync-from-cloudinary` — reconstruye el índice de fotos.
 - `/qr-page` — QR imprimible para los carteles del salón (sin secreto).
 
@@ -207,6 +212,63 @@ Si cargás `MP_CVU` aparece además el CVU para quien transfiera desde el banco.
 El soporte quedó hecho, apagado por defecto. Cargá `MP_LINK` (app: *Cobrar →
 Tu Link*) o `MP_QR_IMG` (app: *Cobrar → QR*, imagen dentro de `static/`) y el QR
 aparece solo en `/regalo` y en `/qr-page`. El alias sigue estando abajo.
+
+## La réplica en Drive
+
+Cada foto, canción y confirmación se copia a tu Google Drive:
+
+| Qué | A dónde |
+|---|---|
+| Fotos | un archivo en la carpeta de Drive, más una fila en la planilla con quién la subió y el link |
+| Canciones | pestaña `Canciones` de la planilla |
+| Confirmaciones | pestaña `Confirmaciones` de la planilla |
+
+Las pestañas se crean solas con sus cabeceras la primera vez.
+
+**Es un espejo, no una dependencia.** Todo se encola en un hilo aparte: si Drive
+está caído o el token venció, el invitado igual sube la foto y no ve ningún
+error. Lo que falla queda sin marcar en SQLite y se reintenta desde
+`/admin/google?secret=...&reintentar=1`. Sin credenciales cargadas, el sitio
+funciona exactamente igual y no espeja nada.
+
+### Por qué no va a Google Photos
+
+No se puede. Desde 2025 la API de Google Photos sólo deja tocar lo que creó la
+propia app: no hay forma de agregar fotos a un álbum que hiciste vos a mano, ni
+de escribir en uno del que sólo tenés el link para compartir. Si querés que
+terminen en Photos, lo práctico es subir la carpeta de Drive a mano después de
+la fiesta.
+
+### Por qué OAuth y no una cuenta de servicio
+
+Una cuenta de servicio escribe bien en una planilla que ya existe, pero **no
+puede subir archivos a un Drive personal**: no tiene cuota propia y Google
+rechaza la subida con *"Service Accounts do not have storage quota"*. Con OAuth
+los archivos quedan a tu nombre, en tu Drive y contra tu cuota.
+
+### Cómo se configura
+
+```bash
+pip install google-auth-oauthlib
+python scripts/autorizar_google.py
+```
+
+El script explica los cuatro pasos en Google Cloud (habilitar Drive API y
+Sheets API, crear un cliente OAuth de escritorio), abre el navegador e imprime
+las variables listas para pegar en Render:
+
+| Variable | De dónde sale |
+|---|---|
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | el cliente OAuth que creaste |
+| `GOOGLE_REFRESH_TOKEN` | lo imprime el script |
+| `DRIVE_FOLDER_ID` | `drive.google.com/drive/folders/<ESTO>` |
+| `SHEET_ID` | `docs.google.com/spreadsheets/d/<ESTO>/edit` |
+
+El sitio pide el permiso mínimo (`drive.file`): sólo ve los archivos que crea
+él, no el resto de tu Drive. El refresh token es una llave a tu cuenta — va en
+las variables de entorno de Render, nunca en el repo.
+
+---
 
 ## Deploy en Render
 

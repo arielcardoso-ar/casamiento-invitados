@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Confirmaciones — {{ novia_corto }} &amp; {{ novio_corto }}{% endblock %}
+
+{% block styles %}
+.conf-head { text-align: center; padding: .5rem 0 1.25rem; }
+.conf-head h1 {
+    font-family: var(--font-serif); font-size: clamp(1.6rem, 6vw, 2rem);
+    font-weight: 400; color: var(--green-800); margin-bottom: .8rem;
+}
+.conf-cifras { display: flex; justify-content: center; gap: .5rem; flex-wrap: wrap; }
+.cifra {
+    padding: .6rem 1rem; border-radius: var(--radius-sm);
+    background: var(--white); border: 1px solid var(--line); min-width: 92px;
+}
+.cifra .n {
+    display: block; font-family: var(--font-serif); font-size: 1.7rem;
+    line-height: 1; color: var(--green-800); font-variant-numeric: tabular-nums;
+}
+.cifra .q {
+    display: block; margin-top: .35rem; font-family: var(--font-caps);
+    font-size: .64rem; letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+}
+
+.conf-lista { list-style: none; display: grid; gap: .55rem; margin-top: 1.5rem; }
+.conf-item {
+    padding: .85rem 1rem; background: var(--white);
+    border: 1px solid var(--line); border-radius: var(--radius-sm);
+    border-left: 3px solid var(--green-300);
+}
+.conf-item.no { border-left-color: var(--rose-300); opacity: .78; }
+.conf-item .fila { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; }
+.conf-item .nombre { font-weight: 600; color: var(--green-800); }
+.conf-item .cuando { font-size: .76rem; color: var(--muted); white-space: nowrap; }
+.conf-item .dato { margin-top: .25rem; font-size: .86rem; color: var(--ink-soft); }
+.conf-item .dato b { color: var(--green-700); font-weight: 600; }
+
+.vacio {
+    text-align: center; padding: 3rem 1.5rem; background: var(--white);
+    border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-sm);
+}
+.vacio .emoji { font-size: 2.8rem; }
+.vacio h2 {
+    font-family: var(--font-serif); font-size: 1.3rem; font-weight: 400;
+    color: var(--green-800); margin: .8rem 0 .4rem;
+}
+.vacio p { color: var(--muted); font-size: .92rem; }
+{% endblock %}
+
+{% block content %}
+<div class="conf-head">
+    <h1>Confirmaciones</h1>
+    <div class="conf-cifras">
+        <div class="cifra"><span class="n">{{ total_personas }}</span><span class="q">Personas</span></div>
+        <div class="cifra"><span class="n">{{ total_si }}</span><span class="q">Confirmaron</span></div>
+        <div class="cifra"><span class="n">{{ total_no }}</span><span class="q">No pueden</span></div>
+    </div>
+</div>
+
+{% if confirmaciones %}
+<ul class="conf-lista">
+    {% for c in confirmaciones %}
+    <li class="conf-item {{ '' if c.asiste else 'no' }}">
+        <div class="fila">
+            <span class="nombre">{{ c.nombre }}</span>
+            <span class="cuando">{{ c.cuando }}</span>
+        </div>
+        <div class="dato">
+            {% if c.asiste %}
+                <b>Viene</b>{% if c.acompanantes %} · con {{ c.acompanantes }} acompañante{{ '' if c.acompanantes == 1 else 's' }}{% endif %}
+            {% else %}
+                <b>No puede venir</b>
+            {% endif %}
+        </div>
+        {% if c.restricciones %}<div class="dato">🍽️ {{ c.restricciones }}</div>{% endif %}
+        {% if c.mensaje %}<div class="dato">💬 {{ c.mensaje }}</div>{% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<div class="vacio">
+    <div class="emoji" aria-hidden="true">💌</div>
+    <h2>Todavía no confirmó nadie</h2>
+    <p>Cuando alguien complete el formulario de la invitación va a aparecer acá,
+       y también en la planilla de Drive.</p>
+</div>
+{% endif %}
+{% endblock %}
