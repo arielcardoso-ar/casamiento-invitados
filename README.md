@@ -11,8 +11,17 @@ Sitio público del casamiento. Cuatro cosas, ninguna más:
 | `/galeria` | Álbum compartido con todo lo que suben. **Cerrado hasta el evento.** |
 | `/regalo` | Alias de Mercado Pago con copiado en un toque. |
 
-Extras para los novios: `/qr-page` (QR imprimible para los carteles del salón) y
-`/admin/sync-from-cloudinary` (reconstruye el índice de fotos).
+Y dentro de la invitación, un bloque para que los invitados **sugieran una
+canción** para la playlist. Ese sí está abierto desde ahora: la gracia es llegar
+a la fiesta con la lista armada.
+
+Extras para los novios, todos detrás de `?secret=<ADMIN_SECRET>`:
+
+- `/admin/canciones` — la playlist que van sugiriendo, agrupada por tema y
+  ordenada por cuántas veces la pidieron, con un botón que copia la lista
+  entera en formato `tema - artista` para pegarla en el buscador de Spotify.
+- `/admin/sync-from-cloudinary` — reconstruye el índice de fotos.
+- `/qr-page` — QR imprimible para los carteles del salón (sin secreto).
 
 ---
 

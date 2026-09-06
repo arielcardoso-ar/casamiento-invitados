@@ -384,6 +384,64 @@ def api_upload_foto():
                     'message': f'{subidas} foto{plural} subida{plural}'})
 
 
+# ── Canciones para la playlist ────────────────────────────────────────────────
+
+# A diferencia de la galería, esto está abierto desde el principio: la gracia es
+# juntar las canciones **antes** de la fiesta, para llegar con la playlist hecha.
+
+@app.route('/api/canciones', methods=['POST'])
+def api_sugerir_cancion():
+    datos = request.get_json(silent=True) or request.form
+    titulo = (datos.get('titulo') or '').strip()[:120]
+    artista = (datos.get('artista') or '').strip()[:80]
+    sugerido_por = (datos.get('nombre') or '').strip()[:60]
+
+    if not titulo:
+        return jsonify({'success': False, 'message': 'Falta el nombre del tema'}), 400
+
+    try:
+        db.agregar_cancion(titulo, artista, sugerido_por)
+    except Exception:
+        app.logger.exception('Error guardando la canción')
+        return jsonify({'success': False, 'message': 'No se pudo guardar. Probá de nuevo.'}), 500
+
+    return jsonify({'success': True, 'total': db.contar_canciones()})
+
+
+@app.route('/api/canciones/total')
+def api_total_canciones():
+    return jsonify({'total': db.contar_canciones()})
+
+
+@app.route('/admin/canciones')
+def admin_canciones():
+    """La lista para armar la playlist. Protegida con ?secret=<ADMIN_SECRET>."""
+    if not ADMIN_SECRET or request.args.get('secret') != ADMIN_SECRET:
+        return jsonify({'error': 'Forbidden'}), 403
+
+    # Agrupadas por tema: si tres personas piden la misma, se ve de una.
+    agrupadas = {}
+    # De la más vieja a la más nueva: así el tema queda escrito como lo tipeó
+    # quien lo pidió primero, y no en mayúsculas porque el último gritó.
+    for cancion in reversed(db.get_canciones()):
+        clave = (cancion['titulo'].strip().lower(),
+                 (cancion['artista'] or '').strip().lower())
+        entrada = agrupadas.setdefault(clave, {
+            'titulo': cancion['titulo'],
+            'artista': cancion['artista'] or '',
+            'veces': 0,
+            'quienes': [],
+        })
+        entrada['veces'] += 1
+        quien = (cancion['sugerido_por'] or '').strip()
+        if quien and quien not in entrada['quienes']:
+            entrada['quienes'].append(quien)
+
+    lista = sorted(agrupadas.values(), key=lambda c: (-c['veces'], c['titulo'].lower()))
+    return render_template('canciones.html', canciones=lista,
+                           total=db.contar_canciones())
+
+
 @app.errorhandler(413)
 def demasiado_grande(_e):
     return jsonify({'success': False,

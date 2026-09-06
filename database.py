@@ -129,7 +129,18 @@ class CasamientoDatabase:
                 fecha_subida TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-        
+
+        # Canciones que sugieren los invitados para la playlist de la fiesta
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS canciones (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                titulo TEXT NOT NULL,
+                artista TEXT,
+                sugerido_por TEXT,
+                fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
         conn.commit()
         conn.close()
     
@@ -494,9 +505,41 @@ class CasamientoDatabase:
         cursor = conn.cursor()
         
         cursor.execute('DELETE FROM fotos WHERE id = ?', (foto_id,))
-        
+
         conn.commit()
         conn.close()
+
+    # ========== CANCIONES ==========
+
+    def agregar_cancion(self, titulo, artista='', sugerido_por=''):
+        """Guardar una canción sugerida; devuelve su ID."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            'INSERT INTO canciones (titulo, artista, sugerido_por) VALUES (?, ?, ?)',
+            (titulo, artista, sugerido_por))
+        cancion_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return cancion_id
+
+    def get_canciones(self):
+        """Todas las sugerencias, de la más nueva a la más vieja."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            'SELECT id, titulo, artista, sugerido_por, fecha '
+            'FROM canciones ORDER BY fecha DESC, id DESC')
+        filas = cursor.fetchall()
+        conn.close()
+        return [dict(f) for f in filas]
+
+    def contar_canciones(self):
+        conn = self.get_connection()
+        total = conn.execute('SELECT COUNT(*) FROM canciones').fetchone()[0]
+        conn.close()
+        return total
+
 
 if __name__ == '__main__':
     # Inicializar base de datos

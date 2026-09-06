@@ -411,6 +411,24 @@
     .rsvp .btn { margin-top: 1.9rem; font-family: var(--font-caps); font-size: .8rem; letter-spacing: .22em; text-transform: uppercase; padding: 1rem 2.4rem; }
     .rsvp .deadline { margin-top: 1.1rem; font-size: .9rem; color: var(--muted); font-family: var(--font-ui); }
 
+    /* ══ Canción para la playlist ═══════════════════════════════════════════ */
+    .cancion { background: var(--white); text-align: center; }
+    .cancion-form { max-width: 420px; margin: 0 auto; display: grid; gap: .65rem; }
+    .cancion-form .btn { margin-top: .4rem; }
+    .cancion-nota {
+        margin: 0 auto 1.6rem; max-width: 34ch;
+        font-size: clamp(1.05rem, 3.8vw, 1.2rem); color: var(--ink-soft); font-weight: 300;
+    }
+    .cancion-estado {
+        min-height: 1.5rem; font-family: var(--font-ui);
+        font-size: .92rem; font-weight: 600; color: var(--green-700);
+    }
+    .cancion-estado.error { color: var(--rose-700); }
+    .cancion-total {
+        font-family: var(--font-caps); font-size: .7rem; letter-spacing: .22em;
+        text-transform: uppercase; color: var(--muted); min-height: 1rem;
+    }
+
     /* ══ Accesos ════════════════════════════════════════════════════════════ */
     .actions { background: var(--paper-2); }
     .action-grid {
@@ -805,6 +823,27 @@
     </div>
 </section>
 
+<!-- ══════════════════════════ CANCIÓN ══════════════════════════ -->
+<section class="cancion" id="cancion">
+    <h2 class="kicker-script reveal">Sumá una canción</h2>
+    <p class="section-sub reveal">Para que la pista no pare</p>
+    <p class="cancion-nota reveal d1">Decinos cuál es el tema que no puede faltar y lo agregamos a la playlist de la fiesta.</p>
+
+    <form class="cancion-form reveal d2" id="formCancion" novalidate>
+        <input class="input-field" id="canTitulo" maxlength="120" required
+               placeholder="Nombre del tema" aria-label="Nombre del tema">
+        <input class="input-field" id="canArtista" maxlength="80"
+               placeholder="Artista o banda" aria-label="Artista o banda">
+        <input class="input-field" id="canNombre" maxlength="60" autocomplete="name"
+               placeholder="Tu nombre (opcional)" aria-label="Tu nombre">
+        <button type="submit" class="btn btn-rose btn-block" id="btnCancion">
+            <span id="btnCancionTexto">Sumar a la playlist</span>
+        </button>
+        <p class="cancion-estado" id="canEstado" role="status"></p>
+        <p class="cancion-total" id="canTotal"></p>
+    </form>
+</section>
+
 <!-- ══════════════════════════ ACCESOS ══════════════════════════ -->
 <section class="tiene-fondo actions">
     {{ capa('actions') }}
@@ -867,6 +906,68 @@
         } else {
             polaroids.forEach(colgar);   // sin observer, mejor verlas que no verlas
         }
+    }
+
+    // ── Canción para la playlist ────────────────────────────────────────────
+    const formCancion = document.getElementById('formCancion');
+    if (formCancion) {
+        const CLAVE_NOMBRE = 'ka:nombre';   // el mismo que usa la página de fotos
+        const titulo  = document.getElementById('canTitulo');
+        const artista = document.getElementById('canArtista');
+        const nombre  = document.getElementById('canNombre');
+        const estado  = document.getElementById('canEstado');
+        const total   = document.getElementById('canTotal');
+        const boton   = document.getElementById('btnCancion');
+        const texto   = document.getElementById('btnCancionTexto');
+
+        try { nombre.value = localStorage.getItem(CLAVE_NOMBRE) || ''; } catch {}
+
+        const pintarTotal = n => {
+            total.textContent = !n ? '' : n === 1 ? 'Va 1 canción' : `Van ${n} canciones`;
+        };
+        fetch('/api/canciones/total').then(r => r.json()).then(d => pintarTotal(d.total)).catch(() => {});
+
+        formCancion.addEventListener('submit', async e => {
+            e.preventDefault();
+            if (!titulo.value.trim()) {
+                estado.className = 'cancion-estado error';
+                estado.textContent = 'Escribí al menos el nombre del tema.';
+                titulo.focus();
+                return;
+            }
+
+            boton.disabled = true;
+            texto.textContent = 'Sumando…';
+            estado.className = 'cancion-estado';
+            estado.textContent = '';
+
+            try {
+                const r = await fetch('/api/canciones', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        titulo: titulo.value.trim(),
+                        artista: artista.value.trim(),
+                        nombre: nombre.value.trim(),
+                    }),
+                });
+                const d = await r.json();
+                if (!d.success) throw new Error(d.message || 'error');
+
+                try { localStorage.setItem(CLAVE_NOMBRE, nombre.value.trim()); } catch {}
+                estado.className = 'cancion-estado';
+                estado.textContent = '¡Anotada! Gracias 🎶';
+                pintarTotal(d.total);
+                titulo.value = '';
+                artista.value = '';
+            } catch (err) {
+                estado.className = 'cancion-estado error';
+                estado.textContent = 'No se pudo guardar. Revisá la conexión y probá de nuevo.';
+            } finally {
+                boton.disabled = false;
+                texto.textContent = 'Sumar otra';
+            }
+        });
     }
 
     // ── Nav flotante: fondo sólido al dejar el hero ─────────────────────────

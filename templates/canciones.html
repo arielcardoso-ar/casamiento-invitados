@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Playlist — {{ novia_corto }} &amp; {{ novio_corto }}{% endblock %}
+
+{% block styles %}
+.play-head { text-align: center; padding: .5rem 0 1.5rem; }
+.play-head h1 {
+    font-family: var(--font-serif); font-size: clamp(1.6rem, 6vw, 2rem);
+    font-weight: 400; color: var(--green-800); margin-bottom: .4rem;
+}
+.play-head p { color: var(--muted); font-size: .94rem; }
+
+.play-lista { list-style: none; display: grid; gap: .55rem; }
+.play-item {
+    display: flex; align-items: baseline; gap: .75rem;
+    padding: .85rem 1rem;
+    background: var(--white); border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+}
+.play-item .n {
+    flex: none; min-width: 1.6rem;
+    font-family: var(--font-caps); font-size: .78rem; color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+.play-item .tema { flex: 1; min-width: 0; }
+.play-item .titulo { font-weight: 600; color: var(--green-800); }
+.play-item .artista { color: var(--ink-soft); }
+.play-item .quienes {
+    display: block; margin-top: .2rem;
+    font-size: .8rem; color: var(--muted);
+}
+.play-item .veces {
+    flex: none; padding: .2rem .6rem; border-radius: 99px;
+    background: var(--rose-50); border: 1px solid var(--rose-200);
+    color: var(--rose-700); font-size: .74rem; font-weight: 700;
+}
+
+.play-acciones { display: flex; flex-direction: column; gap: .6rem; margin: 1.5rem 0; }
+
+.vacio {
+    text-align: center; padding: 3rem 1.5rem;
+    background: var(--white); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow-sm);
+}
+.vacio .emoji { font-size: 2.8rem; }
+.vacio h2 {
+    font-family: var(--font-serif); font-size: 1.3rem; font-weight: 400;
+    color: var(--green-800); margin: .8rem 0 .4rem;
+}
+.vacio p { color: var(--muted); font-size: .92rem; }
+{% endblock %}
+
+{% block content %}
+<div class="play-head">
+    <h1>La playlist</h1>
+    <p>
+        {% if total %}
+            {{ canciones|length }} tema{{ '' if canciones|length == 1 else 's' }}
+            de {{ total }} sugerencia{{ '' if total == 1 else 's' }}
+        {% else %}
+            Todavía no sugirió nadie
+        {% endif %}
+    </p>
+</div>
+
+{% if canciones %}
+<div class="play-acciones">
+    <button type="button" class="btn btn-primary btn-block" id="btnCopiar">
+        📋 Copiar la lista entera
+    </button>
+</div>
+
+<ol class="play-lista">
+    {% for cancion in canciones %}
+    <li class="play-item">
+        <span class="n">{{ loop.index }}</span>
+        <span class="tema">
+            <span class="titulo">{{ cancion.titulo }}</span>{% if cancion.artista %}
+            <span class="artista">— {{ cancion.artista }}</span>{% endif %}
+            {% if cancion.quienes %}
+            <span class="quienes">Lo pidió {{ cancion.quienes|join(', ') }}</span>
+            {% endif %}
+        </span>
+        {% if cancion.veces > 1 %}<span class="veces">×{{ cancion.veces }}</span>{% endif %}
+    </li>
+    {% endfor %}
+</ol>
+{% else %}
+<div class="vacio">
+    <div class="emoji" aria-hidden="true">🎶</div>
+    <h2>La playlist está en blanco</h2>
+    <p>Cuando los invitados empiecen a sugerir, van a aparecer acá ordenadas por
+       cuántas veces las pidieron.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script id="datosPlaylist" type="application/json">{{ canciones|tojson }}</script>
+<script>
+(function () {
+    'use strict';
+    const boton = document.getElementById('btnCopiar');
+    if (!boton) return;
+
+    const canciones = JSON.parse(document.getElementById('datosPlaylist').textContent);
+    boton.addEventListener('click', () => {
+        // Una por línea, "tema - artista": es lo que entiende el buscador de
+        // cualquier app de música al pegarlo.
+        const texto = canciones
+            .map(c => c.artista ? `${c.titulo} - ${c.artista}` : c.titulo)
+            .join('\n');
+        copiar(texto, `${canciones.length} temas copiados`);
+    });
+})();
+</script>
+{% endblock %}
