@@ -45,7 +45,8 @@ ALCANCES = ('https://www.googleapis.com/auth/drive.file',
 HOJAS = {
     'Fotos': ('Fecha', 'Quién la subió', 'Mensaje', 'Link en Drive', 'Original'),
     'Canciones': ('Fecha', 'Tema', 'Artista', 'Quién la pidió'),
-    'Confirmaciones': ('Fecha', 'Nombre', '¿Asiste?', 'Cuántos', 'Restricciones', 'Mensaje'),
+    # Sin columna de acompañantes: la confirmación es individual, uno por fila.
+    'Confirmaciones': ('Fecha', 'Nombre', '¿Asiste?', 'Restricciones', 'Mensaje'),
 }
 
 
@@ -220,8 +221,7 @@ def _despachar(tipo, datos):
     elif tipo == 'confirmacion':
         _agregar_fila('Confirmaciones',
                       (datos['cuando'], datos['nombre'], datos['asiste'],
-                       datos['acompanantes'], datos['restricciones'],
-                       datos['mensaje']))
+                       datos['restricciones'], datos['mensaje']))
         _marcar('confirmacion', datos['id'], '')
 
 

@@ -845,6 +845,7 @@
     <h2 class="kicker-script reveal">Confirmá tu lugar</h2>
     <div class="reveal d1">
         <p class="lead">Tu presencia es nuestro mejor regalo.<br>Avisanos si venís así reservamos tu silla.</p>
+        <p class="deadline">La confirmación es individual: si van varios de tu familia o grupo, que cada uno complete la suya.</p>
 
         <form class="rsvp-form" id="formRsvp" novalidate>
             <input class="input-field" id="rsvpNombre" maxlength="80" required
@@ -859,9 +860,6 @@
             </div>
 
             <div class="rsvp-extra" id="rsvpExtra">
-                <input class="input-field" id="rsvpAcomp" type="number" min="0" max="20"
-                       inputmode="numeric" placeholder="¿Cuántos te acompañan? (0 si venís solo)"
-                       aria-label="Cuántas personas te acompañan">
                 <input class="input-field" id="rsvpRestric" maxlength="200"
                        placeholder="¿Alguna restricción con la comida?"
                        aria-label="Restricciones con la comida">
@@ -1009,7 +1007,6 @@
                     body: JSON.stringify({
                         nombre: nombre.value.trim(),
                         asiste: si.checked ? 1 : 0,
-                        acompanantes: document.getElementById('rsvpAcomp').value || 0,
                         restricciones: document.getElementById('rsvpRestric').value.trim(),
                         mensaje: document.getElementById('rsvpMensaje').value.trim(),
                     }),

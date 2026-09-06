@@ -147,7 +147,7 @@ class CasamientoDatabase:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 nombre TEXT NOT NULL,
                 asiste INTEGER DEFAULT 1,
-                acompanantes INTEGER DEFAULT 0,
+                acompanantes INTEGER DEFAULT 0,  -- sin usar: la confirmación es individual
                 restricciones TEXT,
                 mensaje TEXT,
                 fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP

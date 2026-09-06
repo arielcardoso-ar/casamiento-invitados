@@ -51,7 +51,6 @@
 <div class="conf-head">
     <h1>Confirmaciones</h1>
     <div class="conf-cifras">
-        <div class="cifra"><span class="n">{{ total_personas }}</span><span class="q">Personas</span></div>
         <div class="cifra"><span class="n">{{ total_si }}</span><span class="q">Confirmaron</span></div>
         <div class="cifra"><span class="n">{{ total_no }}</span><span class="q">No pueden</span></div>
     </div>
@@ -67,7 +66,7 @@
         </div>
         <div class="dato">
             {% if c.asiste %}
-                <b>Viene</b>{% if c.acompanantes %} · con {{ c.acompanantes }} acompañante{{ '' if c.acompanantes == 1 else 's' }}{% endif %}
+                <b>Viene</b>
             {% else %}
                 <b>No puede venir</b>
             {% endif %}

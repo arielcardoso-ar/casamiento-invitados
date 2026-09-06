@@ -453,15 +453,13 @@ def api_confirmar():
         return jsonify({'success': False, 'message': 'Falta tu nombre'}), 400
 
     asiste = str(datos.get('asiste', '1')).lower() not in ('0', 'false', 'no')
-    try:
-        acompanantes = max(0, min(20, int(datos.get('acompanantes') or 0)))
-    except (TypeError, ValueError):
-        acompanantes = 0
 
+    # La confirmación es individual: no se aceptan acompañantes. Cada invitado
+    # de la lista tiene que llenar su propio formulario.
     registro = {
         'nombre': nombre,
         'asiste': asiste,
-        'acompanantes': acompanantes if asiste else 0,
+        'acompanantes': 0,
         'restricciones': (datos.get('restricciones') or '').strip()[:200],
         'mensaje': (datos.get('mensaje') or '').strip()[:400],
     }
@@ -477,7 +475,6 @@ def api_confirmar():
                         cuando=config.ahora().strftime('%d/%m/%Y %H:%M'),
                         nombre=nombre,
                         asiste='Sí' if asiste else 'No',
-                        acompanantes=registro['acompanantes'],
                         restricciones=registro['restricciones'],
                         mensaje=registro['mensaje'])
 
@@ -497,7 +494,6 @@ def admin_confirmaciones():
     vienen = [c for c in confirmaciones if c['asiste']]
     return render_template('confirmaciones.html',
                            confirmaciones=confirmaciones,
-                           total_personas=sum(1 + c['acompanantes'] for c in vienen),
                            total_si=len(vienen),
                            total_no=len(confirmaciones) - len(vienen))
 
@@ -542,7 +538,6 @@ def admin_google():
                 cuando=_hora_local(confirmacion['fecha']),
                 nombre=confirmacion['nombre'],
                 asiste='Sí' if confirmacion['asiste'] else 'No',
-                acompanantes=confirmacion['acompanantes'],
                 restricciones=confirmacion['restricciones'] or '',
                 mensaje=confirmacion['mensaje'] or ''))
         respuesta['reencolados'] = encolados
