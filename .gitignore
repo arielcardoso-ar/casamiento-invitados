@@ -18,3 +18,9 @@ static/uploads/
 # SQLite en modo WAL
 *.db-wal
 *.db-shm
+
+# Entorno virtual: Render instala el suyo desde requirements.txt.
+.venv/
+
+# Config local de Claude Code.
+.claude/

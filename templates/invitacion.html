@@ -7,9 +7,20 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="{{ novia_corto }} & {{ novio_corto }}">
 <meta name="description" content="{{ novia_corto }} y {{ novio_corto }} se casan el {{ fecha_larga }}. Ceremonia en {{ ceremonia.titulo }}.">
-<meta property="og:title" content="{{ novia_corto }} & {{ novio_corto }} — {{ fecha_larga }}">
+<meta property="og:title" content="{{ novia_corto }} &amp; {{ novio_corto }} — {{ fecha_larga }}">
 <meta property="og:description" content="Nos casamos y queremos celebrarlo con vos.">
 <meta property="og:type" content="website">
+<meta property="og:locale" content="es_AR">
+<meta property="og:site_name" content="{{ novia_corto }} &amp; {{ novio_corto }}">
+<meta property="og:url" content="{{ request.url_root }}">
+{# Lo que decide si alguien abre la invitación que le llegó por WhatsApp es
+   esta tarjeta. Sin imagen, WhatsApp muestra un rectángulo gris con la URL. #}
+<meta property="og:image" content="{{ url_for('static', filename='img/og.jpg', _external=True) }}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="{{ novia }} y {{ novio }} — {{ fecha_larga }}">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
 
 <title>{{ novia_corto }} &amp; {{ novio_corto }} — {{ fecha_corta }}</title>
 

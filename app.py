@@ -13,6 +13,8 @@ Las fotos se persisten en Cloudinary; SQLite funciona como índice local.
 
 import io
 import os
+import threading
+import time
 import uuid
 from datetime import datetime, timezone
 from functools import wraps
@@ -77,6 +79,69 @@ db = CasamientoDatabase()
 # Réplica en Drive/Sheets. Si no hay credenciales cargadas no arranca nada y el
 # sitio funciona igual: es un espejo, no una dependencia.
 google_sync.iniciar(al_terminar=db.marcar_replicado)
+
+
+# ── Límite de tasa ────────────────────────────────────────────────────────────
+
+# Los tres POST son públicos y dos de ellos escriben en la planilla de Google:
+# sin freno, un bot puede llenarla de basura en minutos.
+#
+# El detalle que manda acá es que en el salón **todos los invitados salen por la
+# misma IP**. Un límite apretado no frenaría a un atacante y sí dejaría a media
+# fiesta sin poder subir fotos, así que el de fotos es deliberadamente alto: la
+# idea es cortar un bucle desbocado, no vigilar a los invitados.
+
+_visitas = {}                       # ip -> [timestamps]
+_candado_tasa = threading.Lock()
+_ultima_limpieza = time.monotonic()
+
+
+def _ip_cliente():
+    """
+    IP real detrás del proxy de Render. Se puede falsear, pero para esto
+    alcanza: el objetivo es frenar un script tonto, no un adversario decidido.
+    """
+    reenviada = request.headers.get('X-Forwarded-For', '')
+    if reenviada:
+        return reenviada.split(',')[0].strip()
+    return request.remote_addr or 'desconocida'
+
+
+def limitar(maximo, ventana=3600):
+    """Deja pasar `maximo` pedidos por IP cada `ventana` segundos."""
+    def decorador(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            global _ultima_limpieza
+            ahora = time.monotonic()
+            clave = f'{f.__name__}:{_ip_cliente()}'
+
+            with _candado_tasa:
+                # Barrido ocasional para que el diccionario no crezca sin fin.
+                if ahora - _ultima_limpieza > 900:
+                    for k in [k for k, v in _visitas.items()
+                              if not v or ahora - v[-1] > ventana]:
+                        del _visitas[k]
+                    _ultima_limpieza = ahora
+
+                recientes = [t for t in _visitas.get(clave, ()) if ahora - t < ventana]
+                if len(recientes) >= maximo:
+                    _visitas[clave] = recientes
+                    espera = int(ventana - (ahora - recientes[0]))
+                    app.logger.warning('Límite alcanzado en %s desde %s',
+                                       f.__name__, _ip_cliente())
+                    return jsonify({
+                        'success': False,
+                        'message': 'Estás mandando demasiado seguido. '
+                                   'Esperá un rato y probá de nuevo.',
+                    }), 429, {'Retry-After': str(max(espera, 1))}
+
+                recientes.append(ahora)
+                _visitas[clave] = recientes
+
+            return f(*args, **kwargs)
+        return wrapper
+    return decorador
 
 
 # ── Apertura de la galería ────────────────────────────────────────────────────
@@ -402,6 +467,8 @@ def _tipo_mime(ruta):
 
 
 @app.route('/api/fotos/upload', methods=['POST'])
+# Alto a propósito: en la fiesta salen todos por la misma IP del salón.
+@limitar(maximo=400)
 @requiere_apertura
 def api_upload_foto():
     archivos = [f for f in request.files.getlist('fotos') if f and f.filename]
@@ -439,6 +506,7 @@ def api_upload_foto():
 # juntar las canciones **antes** de la fiesta, para llegar con la playlist hecha.
 
 @app.route('/api/canciones', methods=['POST'])
+@limitar(maximo=15)
 def api_sugerir_cancion():
     datos = request.get_json(silent=True) or request.form
     titulo = (datos.get('titulo') or '').strip()[:120]
@@ -469,6 +537,7 @@ def api_total_canciones():
 # ── Confirmaciones de asistencia ──────────────────────────────────────────────
 
 @app.route('/api/confirmaciones', methods=['POST'])
+@limitar(maximo=25)
 def api_confirmar():
     datos = request.get_json(silent=True) or request.form
     nombre = (datos.get('nombre') or '').strip()[:80]
@@ -601,6 +670,35 @@ def admin_canciones():
 def demasiado_grande(_e):
     return jsonify({'success': False,
                     'message': 'La foto es demasiado grande (máximo 25 MB)'}), 413
+
+
+def _quiere_json():
+    """Las rutas /api contestan JSON; el resto, una página."""
+    return request.path.startswith('/api/') or request.is_json
+
+
+@app.errorhandler(404)
+def no_encontrado(_e):
+    if _quiere_json():
+        return jsonify({'success': False, 'message': 'No existe'}), 404
+    return render_template(
+        'error.html', emoji='🌿',
+        titulo='Por acá no hay nada',
+        copy='El link puede estar cortado o tener una letra de más. '
+             'Volvé a la invitación y seguí desde ahí.'), 404
+
+
+@app.errorhandler(500)
+def error_interno(e):
+    app.logger.exception('Error no manejado: %s', e)
+    if _quiere_json():
+        return jsonify({'success': False,
+                        'message': 'Algo se rompió de nuestro lado'}), 500
+    return render_template(
+        'error.html', emoji='🌸',
+        titulo='Se nos rompió algo',
+        copy='No es culpa tuya. Probá de nuevo en un minuto; si sigue igual, '
+             'avisanos y lo miramos.'), 500
 
 
 # ── Recuperación del índice ───────────────────────────────────────────────────
