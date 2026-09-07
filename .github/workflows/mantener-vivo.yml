@@ -1,0 +1,38 @@
+# Mantiene el sitio despierto sin depender de ninguna computadora encendida.
+#
+# Render, en el plan free, duerme el servicio a los 15 minutos sin tráfico y la
+# siguiente visita tarda ~45s en levantar. Un invitado que abre el link desde
+# WhatsApp y ve una pantalla en blanco medio minuto, se va.
+#
+# Esto corre en la infraestructura de GitHub, gratis para repos públicos.
+
+name: Mantener el sitio despierto
+
+on:
+  schedule:
+    # Cada 10 minutos. GitHub a veces demora los cron bajo carga, por eso el
+    # margen contra los 15 minutos de Render es amplio a propósito.
+    - cron: '*/10 * * * *'
+  # Para poder dispararlo a mano desde la pestaña Actions.
+  workflow_dispatch:
+
+# Si un ping quedó colgado, que el siguiente no se apile detrás.
+concurrency:
+  group: mantener-vivo
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Despertar el sitio
+        run: |
+          # --max-time generoso: si estaba dormido, esta request es la que lo
+          # levanta y puede tardar cerca de un minuto.
+          codigo=$(curl -s -o /dev/null -w '%{http_code}' --max-time 90 \
+            https://casamiento-katherine-ariel.onrender.com/healthz)
+          echo "healthz respondió $codigo"
+          # 200 es lo esperado. Cualquier otra cosa falla el job para que quede
+          # el mail de GitHub avisando que algo pasa con el sitio.
+          test "$codigo" = "200"
