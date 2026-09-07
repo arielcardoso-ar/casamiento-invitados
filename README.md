@@ -213,9 +213,9 @@ El soporte quedó hecho, apagado por defecto. Cargá `MP_LINK` (app: *Cobrar →
 Tu Link*) o `MP_QR_IMG` (app: *Cobrar → QR*, imagen dentro de `static/`) y el QR
 aparece solo en `/regalo` y en `/qr-page`. El alias sigue estando abajo.
 
-## La réplica en Drive
+## La réplica en Google
 
-Cada foto, canción y confirmación se copia a tu Google Drive:
+Cada confirmación, canción y foto se copia a tu Google:
 
 | Qué | A dónde |
 |---|---|
@@ -224,6 +224,11 @@ Cada foto, canción y confirmación se copia a tu Google Drive:
 | Confirmaciones | pestaña `Confirmaciones` de la planilla |
 
 Las pestañas se crean solas con sus cabeceras la primera vez.
+
+Para las filas hay **dos caminos y alcanza con uno**: publicar un Apps Script
+desde la propia planilla (sin Google Cloud ni OAuth) o usar la API de Sheets
+con OAuth. Las fotos a Drive sí necesitan OAuth. Si están los dos configurados,
+para las filas manda el webhook.
 
 **Es un espejo, no una dependencia.** Todo se encola en un hilo aparte: si Drive
 está caído o el token venció, el invitado igual sube la foto y no ve ningún
@@ -239,14 +244,45 @@ de escribir en uno del que sólo tenés el link para compartir. Si querés que
 terminen en Photos, lo práctico es subir la carpeta de Drive a mano después de
 la fiesta.
 
-### Por qué OAuth y no una cuenta de servicio
+### Por qué las fotos van con OAuth y no con una cuenta de servicio
 
 Una cuenta de servicio escribe bien en una planilla que ya existe, pero **no
 puede subir archivos a un Drive personal**: no tiene cuota propia y Google
 rechaza la subida con *"Service Accounts do not have storage quota"*. Con OAuth
 los archivos quedan a tu nombre, en tu Drive y contra tu cuota.
 
-### Cómo se configura
+### Cómo se configura — camino corto (sólo la planilla)
+
+Es el que conviene si lo único que querés es la planilla con confirmaciones y
+canciones. **No hace falta proyecto en Google Cloud, ni pantalla de
+consentimiento, ni tokens OAuth**: el script vive dentro de la propia hoja.
+
+1. Creá una planilla en Google Sheets (podés dejarla vacía; las pestañas se
+   crean solas con sus cabeceras).
+2. Extensiones → Apps Script. Borrá lo que haya y pegá todo
+   [`scripts/apps_script_planilla.gs`](scripts/apps_script_planilla.gs).
+3. Implementar → Nueva implementación → ⚙ → **Aplicación web**, con
+   *Ejecutar como: yo* y *Quién tiene acceso: cualquier usuario*. Autorizá.
+4. Copiá la URL que termina en `/exec`.
+5. En Render → Environment:
+
+   | Variable | Valor |
+   |---|---|
+   | `SHEET_WEBHOOK_URL` | la URL que termina en `/exec` |
+   | `SHEET_WEBHOOK_TOKEN` | el `TOKEN` que ya viene escrito en el `.gs` |
+
+Lo de *"cualquier usuario"* suena peor de lo que es: el script rechaza todo lo
+que no traiga el token. Es justamente lo que permite que el sitio escriba sin
+autenticarse contra Google.
+
+Cada fila viaja con una clave (`confirmacion-12`) en una última columna oculta.
+Si el sitio reintenta algo porque se perdió la respuesta —no el envío—, el
+script lo detecta y no duplica la fila.
+
+### Cómo se configura — camino largo (además, las fotos en Drive)
+
+El webhook no sube archivos. Para que las fotos vayan a una carpeta de Drive
+hace falta OAuth:
 
 ```bash
 pip install google-auth-oauthlib
@@ -262,11 +298,13 @@ las variables listas para pegar en Render:
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | el cliente OAuth que creaste |
 | `GOOGLE_REFRESH_TOKEN` | lo imprime el script |
 | `DRIVE_FOLDER_ID` | `drive.google.com/drive/folders/<ESTO>` |
-| `SHEET_ID` | `docs.google.com/spreadsheets/d/<ESTO>/edit` |
+| `SHEET_ID` | `docs.google.com/spreadsheets/d/<ESTO>/edit` (sólo si querés la planilla por API en vez del webhook) |
 
 El sitio pide el permiso mínimo (`drive.file`): sólo ve los archivos que crea
 él, no el resto de tu Drive. El refresh token es una llave a tu cuenta — va en
 las variables de entorno de Render, nunca en el repo.
+
+Si están configurados los dos caminos, para las filas manda el webhook.
 
 ---
 

@@ -31,9 +31,17 @@ services:
       # - key: MP_LINK       # link de cobro; con esto el sitio arma el QR de pago
       # - key: MP_QR_IMG     # o el QR oficial de la app (archivo en static/ o URL)
 
-      # ── Réplica en tu Google Drive (opcional) ──
+      # ── Planilla de Google (camino simple, sin Google Cloud) ──
+      # Se publica scripts/apps_script_planilla.gs desde la propia hoja y se
+      # pegan acá la URL /exec y el token que trae ese archivo.
+      - key: SHEET_WEBHOOK_URL
+        sync: false
+      - key: SHEET_WEBHOOK_TOKEN
+        sync: false
+
+      # ── Fotos en tu Google Drive (opcional, requiere OAuth) ──
       # El token lo genera scripts/autorizar_google.py. Sin estas variables el
-      # sitio anda igual: simplemente no espeja nada.
+      # sitio anda igual: simplemente no espeja las fotos.
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET

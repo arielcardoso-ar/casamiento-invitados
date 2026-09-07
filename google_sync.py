@@ -6,20 +6,30 @@ Réplica en Google Drive de todo lo que dejan los invitados.
   Canciones      → una fila en la planilla
   Confirmaciones → una fila en la planilla
 
-Dos decisiones que vale la pena entender antes de tocar esto:
+Hay dos caminos para la planilla, y alcanza con uno:
 
-1. **Se autentica como vos, no con una cuenta de servicio.** Una cuenta de
-   servicio sirve para escribir en una planilla que ya existe, pero no puede
-   subir archivos a un Drive personal: no tiene cuota propia y Google rechaza
-   la subida con "Service Accounts do not have storage quota". Con OAuth los
-   archivos quedan a tu nombre, en tu Drive y contra tu cuota, que es lo que
-   se quiere. `scripts/autorizar_google.py` genera el token una sola vez.
+  A. **Webhook de Apps Script** (`SHEET_WEBHOOK_URL`) — el más simple, y el que
+     conviene si lo único que querés es la planilla. El script vive dentro de la
+     propia hoja, así que no hace falta proyecto en Google Cloud, ni pantalla de
+     consentimiento, ni tokens OAuth: se pega el código, se publica y listo.
+     Ver `scripts/apps_script_planilla.gs`.
 
-2. **Nada de esto puede hacer fallar una subida.** El invitado sacó una foto en
-   la fiesta y la está subiendo con el 4G del salón: si Drive está caído o el
-   token venció, la foto igual tiene que entrar. Todo se encola en un hilo
-   aparte y, si falla, la fila queda sin marcar y se reintenta después con
-   `/admin/google`. Nunca se le devuelve un error al invitado por esto.
+  B. **API de Sheets con OAuth** (`SHEET_ID` + las tres GOOGLE_*) — hace falta
+     igual si además querés las fotos en Drive, porque eso el webhook no lo
+     cubre. Se autentica como vos y no con una cuenta de servicio: una cuenta de
+     servicio escribe bien en una planilla, pero no puede subir archivos a un
+     Drive personal —no tiene cuota propia y Google rechaza la subida con
+     "Service Accounts do not have storage quota"—. `scripts/autorizar_google.py`
+     genera el token una sola vez.
+
+Si están los dos, manda el webhook: es el que menos se rompe.
+
+Y una regla que vale para ambos: **nada de esto puede hacer fallar lo que hizo
+el invitado.** Sacó una foto en la fiesta y la está subiendo con el 4G del
+salón: si Google está caído o el token venció, la foto igual tiene que entrar.
+Todo se encola en un hilo aparte y, si falla, la fila queda sin marcar y se
+reintenta después desde `/admin/google`. Nunca se le devuelve un error al
+invitado por esto.
 """
 
 import io
@@ -37,6 +47,10 @@ REFRESH_TOKEN = os.environ.get('GOOGLE_REFRESH_TOKEN', '')
 CARPETA_DRIVE = os.environ.get('DRIVE_FOLDER_ID', '')
 PLANILLA = os.environ.get('SHEET_ID', '')
 
+# Camino A: el webhook publicado desde la propia planilla.
+WEBHOOK_URL = os.environ.get('SHEET_WEBHOOK_URL', '')
+WEBHOOK_TOKEN = os.environ.get('SHEET_WEBHOOK_TOKEN', '')
+
 TOKEN_URI = 'https://oauth2.googleapis.com/token'
 ALCANCES = ('https://www.googleapis.com/auth/drive.file',
             'https://www.googleapis.com/auth/spreadsheets')
@@ -50,18 +64,27 @@ HOJAS = {
 }
 
 
+def hay_planilla():
+    """¿Hay a dónde mandar las filas?"""
+    return bool(WEBHOOK_URL or (PLANILLA and hay_oauth()))
+
+
+def hay_oauth():
+    return bool(CLIENT_ID and CLIENT_SECRET and REFRESH_TOKEN)
+
+
 def configurado():
-    """¿Hay credenciales y al menos un destino donde escribir?"""
-    return bool(CLIENT_ID and CLIENT_SECRET and REFRESH_TOKEN
-                and (CARPETA_DRIVE or PLANILLA))
+    """¿Hay al menos un destino donde escribir?"""
+    return bool(hay_planilla() or (CARPETA_DRIVE and hay_oauth()))
 
 
 def estado():
     """Qué está configurado y qué falta, para mostrarlo en /admin/google."""
     return {
-        'credenciales': bool(CLIENT_ID and CLIENT_SECRET and REFRESH_TOKEN),
-        'carpeta_drive': bool(CARPETA_DRIVE),
-        'planilla': bool(PLANILLA),
+        'planilla_por_webhook': bool(WEBHOOK_URL),
+        'planilla_por_api': bool(PLANILLA and hay_oauth()),
+        'credenciales_oauth': hay_oauth(),
+        'carpeta_drive': bool(CARPETA_DRIVE and hay_oauth()),
         'activo': configurado(),
         'en_cola': _cola.qsize() if _cola else 0,
     }
@@ -114,20 +137,57 @@ def _asegurar_hoja(nombre):
         hojas.values().append(
             spreadsheetId=PLANILLA, range=f'{nombre}!A1',
             valueInputOption='USER_ENTERED',
-            body={'values': [list(HOJAS[nombre])]},
+            body={'values': [list(HOJAS[nombre]) + ['id']]},
         ).execute()
 
     _hojas_listas.add(nombre)
 
 
-def _agregar_fila(hoja, valores):
-    if not PLANILLA:
-        return
+def _agregar_fila(hoja, valores, clave=''):
+    """
+    Suma una fila a la pestaña. `clave` identifica el registro de forma única
+    ("confirmacion-12") para que un reintento no duplique lo que ya entró: si
+    la respuesta del envío anterior se perdió en el camino, la fila quedó sin
+    marcar en SQLite y se reencola igual.
+    """
+    fila = [('' if v is None else str(v)) for v in valores]
+    if WEBHOOK_URL:
+        _agregar_fila_por_webhook(hoja, fila, clave)
+    elif PLANILLA:
+        _agregar_fila_por_api(hoja, fila, clave)
+
+
+def _agregar_fila_por_webhook(hoja, fila, clave):
+    import urllib.error
+    import urllib.request
+
+    cuerpo = json.dumps({
+        'token': WEBHOOK_TOKEN,
+        'hoja': hoja,
+        'cabeceras': list(HOJAS[hoja]) + ['id'],
+        'valores': fila + [clave],
+        'clave': clave,
+    }).encode('utf-8')
+
+    pedido = urllib.request.Request(
+        WEBHOOK_URL, data=cuerpo,
+        headers={'Content-Type': 'application/json'}, method='POST')
+
+    # Apps Script contesta con un 302 a script.googleusercontent.com; urllib lo
+    # sigue solo. Lo que importa es el JSON del final.
+    with urllib.request.urlopen(pedido, timeout=45) as r:
+        respuesta = json.loads(r.read().decode('utf-8') or '{}')
+
+    if not respuesta.get('ok'):
+        raise RuntimeError(f"El webhook rechazó la fila: {respuesta.get('error')}")
+
+
+def _agregar_fila_por_api(hoja, fila, clave):
     _asegurar_hoja(hoja)
     _servicio('sheets', 'v4').spreadsheets().values().append(
         spreadsheetId=PLANILLA, range=f'{hoja}!A1',
         valueInputOption='USER_ENTERED', insertDataOption='INSERT_ROWS',
-        body={'values': [[('' if v is None else str(v)) for v in valores]]},
+        body={'values': [fila + [clave]]},
     ).execute()
 
 
@@ -207,21 +267,27 @@ def _trabajar():
 
 def _despachar(tipo, datos):
     if tipo == 'foto':
-        link = _subir_a_drive(_bajar(datos['ruta']), datos['nombre'],
-                              datos.get('tipo_mime', 'image/jpeg'))
+        # La foto a Drive sólo si hay OAuth; la fila va igual, con link vacío.
+        link = ''
+        if CARPETA_DRIVE and hay_oauth():
+            link = _subir_a_drive(_bajar(datos['ruta']), datos['nombre'],
+                                  datos.get('tipo_mime', 'image/jpeg'))
         _agregar_fila('Fotos', (datos['cuando'], datos['subido_por'],
-                                datos['descripcion'], link, datos['ruta']))
-        _marcar('foto', datos['id'], link)
+                                datos['descripcion'], link, datos['ruta']),
+                      clave=f"foto-{datos['id']}")
+        _marcar('foto', datos['id'], link or 'ok')
 
     elif tipo == 'cancion':
         _agregar_fila('Canciones', (datos['cuando'], datos['titulo'],
-                                    datos['artista'], datos['sugerido_por']))
+                                    datos['artista'], datos['sugerido_por']),
+                      clave=f"cancion-{datos['id']}")
         _marcar('cancion', datos['id'], '')
 
     elif tipo == 'confirmacion':
         _agregar_fila('Confirmaciones',
                       (datos['cuando'], datos['nombre'], datos['asiste'],
-                       datos['restricciones'], datos['mensaje']))
+                       datos['restricciones'], datos['mensaje']),
+                      clave=f"confirmacion-{datos['id']}")
         _marcar('confirmacion', datos['id'], '')
 
 
