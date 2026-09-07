@@ -192,7 +192,30 @@ def qr_page():
 
 @app.route('/healthz')
 def healthz():
-    return jsonify({'ok': True, 'abierto': config.fotos_abiertas()})
+    """
+    Salud y diagnóstico de configuración.
+
+    `configurado` dice qué integraciones están enchufadas, sin revelar ningún
+    valor: sólo booleanos. Sirve para chequear de un vistazo que el deploy
+    quedó completo, en vez de tener que adivinar por qué algo no anda. Que sea
+    público es a propósito y no filtra nada: saber que falta ADMIN_SECRET no le
+    sirve a nadie para entrar, justamente porque sin él no se entra.
+    """
+    return jsonify({
+        'ok': True,
+        'abierto': config.fotos_abiertas(),
+        'configurado': {
+            # Sin esto las fotos de la fiesta se guardan en disco efímero y se
+            # pierden cuando Render recicla el contenedor. Es lo más crítico.
+            'cloudinary': CLOUDINARY_ENABLED,
+            # Sin esto no hay forma de abrir /admin/... ni la vista previa.
+            'admin_secret': bool(ADMIN_SECRET),
+            # Sin esto la cookie de vista previa se cae en cada reinicio.
+            'secret_key': bool(os.environ.get('SECRET_KEY')),
+            'planilla': google_sync.hay_planilla(),
+            'fotos_a_drive': bool(google_sync.CARPETA_DRIVE and google_sync.hay_oauth()),
+        },
+    })
 
 
 # ── QR ────────────────────────────────────────────────────────────────────────
