@@ -598,12 +598,24 @@ class CasamientoDatabase:
 
     # ========== RÉPLICA EN GOOGLE ==========
 
-    def marcar_replicado(self, tipo, fila_id, link=''):
-        """Deja constancia de que la fila ya viajó a Google."""
+    def marcar_replicado(self, tipo, fila_id, link='', rutas=None):
+        """
+        Deja constancia de que la fila ya viajó a Google.
+
+        Para las fotos, `rutas` puede traer (ruta, thumbnail) nuevas: pasa
+        cuando la foto estaba en el disco efímero de Render y ahora vive en
+        Drive. Hay que reapuntar la galería antes de que ese archivo se pierda.
+        """
         conn = self.get_connection()
         if tipo == 'foto':
-            conn.execute('UPDATE fotos SET drive_link = ? WHERE id = ?',
-                         (link or 'ok', fila_id))
+            if rutas and rutas[0]:
+                conn.execute(
+                    'UPDATE fotos SET drive_link = ?, ruta = ?, thumbnail = ? '
+                    'WHERE id = ?',
+                    (link or 'ok', rutas[0], rutas[1] or rutas[0], fila_id))
+            else:
+                conn.execute('UPDATE fotos SET drive_link = ? WHERE id = ?',
+                             (link or 'ok', fila_id))
         elif tipo == 'cancion':
             conn.execute('UPDATE canciones SET replicado = 1 WHERE id = ?', (fila_id,))
         elif tipo == 'confirmacion':

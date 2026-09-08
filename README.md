@@ -219,16 +219,26 @@ Cada confirmación, canción y foto se copia a tu Google:
 
 | Qué | A dónde |
 |---|---|
-| Fotos | un archivo en la carpeta de Drive, más una fila en la planilla con quién la subió y el link |
+| Fotos | un archivo en una carpeta de tu Drive, más una fila en la planilla con quién la subió y el link |
 | Canciones | pestaña `Canciones` de la planilla |
 | Confirmaciones | pestaña `Confirmaciones` de la planilla |
 
 Las pestañas se crean solas con sus cabeceras la primera vez.
 
-Para las filas hay **dos caminos y alcanza con uno**: publicar un Apps Script
-desde la propia planilla (sin Google Cloud ni OAuth) o usar la API de Sheets
-con OAuth. Las fotos a Drive sí necesitan OAuth. Si están los dos configurados,
-para las filas manda el webhook.
+**El disco de Render es efímero**: lo que sólo esté en SQLite se pierde cuando
+el contenedor se recicla. Por eso esto no es un adorno, es la única copia
+duradera de las confirmaciones y las canciones.
+
+Hay **dos caminos y alcanza con uno**: publicar un Apps Script desde la propia
+planilla (sin Google Cloud ni OAuth, y cubre también las fotos) o usar
+Cloudinary + la API de Sheets con OAuth. Si están los dos, manda el webhook
+para las filas y Cloudinary para las fotos.
+
+Las fotos que suben durante la fiesta pasan primero por el disco de Render y a
+los pocos segundos se copian a Drive; ahí la galería deja de apuntar al disco y
+pasa a servirlas desde Drive, antes de que ese archivo desaparezca. Se achican
+a 2560 px antes de viajar: una foto de celular en base64 hace que Apps Script se
+atragante, y 100 invitados subiendo originales te llenarían el Drive.
 
 **Es un espejo, no una dependencia.** Todo se encola en un hilo aparte: si Drive
 está caído o el token venció, el invitado igual sube la foto y no ve ningún
@@ -251,11 +261,12 @@ puede subir archivos a un Drive personal**: no tiene cuota propia y Google
 rechaza la subida con *"Service Accounts do not have storage quota"*. Con OAuth
 los archivos quedan a tu nombre, en tu Drive y contra tu cuota.
 
-### Cómo se configura — camino corto (sólo la planilla)
+### Cómo se configura — el camino corto (cubre todo)
 
-Es el que conviene si lo único que querés es la planilla con confirmaciones y
-canciones. **No hace falta proyecto en Google Cloud, ni pantalla de
-consentimiento, ni tokens OAuth**: el script vive dentro de la propia hoja.
+**Con esto solo alcanza para que nada se pierda**: confirmaciones y canciones
+van a la planilla, y las fotos de la fiesta a una carpeta de tu Drive. No hace
+falta Cloudinary, ni proyecto en Google Cloud, ni pantalla de consentimiento,
+ni tokens OAuth: el script vive dentro de la propia hoja.
 
 1. Creá una planilla en Google Sheets (podés dejarla vacía; las pestañas se
    crean solas con sus cabeceras).
@@ -279,10 +290,10 @@ Cada fila viaja con una clave (`confirmacion-12`) en una última columna oculta.
 Si el sitio reintenta algo porque se perdió la respuesta —no el envío—, el
 script lo detecta y no duplica la fila.
 
-### Cómo se configura — camino largo (además, las fotos en Drive)
+### Cómo se configura — el camino largo (opcional)
 
-El webhook no sube archivos. Para que las fotos vayan a una carpeta de Drive
-hace falta OAuth:
+Sólo hace falta si preferís **Cloudinary** para las fotos (da miniaturas más
+rápidas y no consume tu cuota de Drive) o la API de Sheets en vez del webhook:
 
 ```bash
 pip install google-auth-oauthlib

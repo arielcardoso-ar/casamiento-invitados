@@ -69,6 +69,17 @@ def hay_planilla():
     return bool(WEBHOOK_URL or (PLANILLA and hay_oauth()))
 
 
+def hay_deposito_de_fotos():
+    """
+    ¿Hay dónde guardar las fotos de forma permanente?
+
+    Importa porque el disco de Render es efímero: sin esto, las fotos de la
+    fiesta viven hasta el próximo reinicio del contenedor y después no están
+    más. El webhook alcanza; Cloudinary también.
+    """
+    return bool(WEBHOOK_URL or (CARPETA_DRIVE and hay_oauth()))
+
+
 def hay_oauth():
     return bool(CLIENT_ID and CLIENT_SECRET and REFRESH_TOKEN)
 
@@ -193,6 +204,60 @@ def _agregar_fila_por_api(hoja, fila, clave):
 
 # ── Drive ─────────────────────────────────────────────────────────────────────
 
+def _subir_foto_por_webhook(datos, nombre, tipo_mime='image/jpeg'):
+    """
+    Manda la foto al Apps Script, que la guarda en Drive y devuelve las URLs
+    con las que la galería la va a mostrar.
+    """
+    import base64
+    import urllib.request
+
+    cuerpo = json.dumps({
+        'token': WEBHOOK_TOKEN,
+        'accion': 'foto',
+        'nombre': nombre,
+        'tipo': tipo_mime,
+        'contenido': base64.b64encode(datos).decode('ascii'),
+    }).encode('utf-8')
+
+    pedido = urllib.request.Request(
+        WEBHOOK_URL, data=cuerpo,
+        headers={'Content-Type': 'application/json'}, method='POST')
+
+    # Generoso: la foto viaja en base64 y Apps Script no es rápido.
+    with urllib.request.urlopen(pedido, timeout=180) as r:
+        respuesta = json.loads(r.read().decode('utf-8') or '{}')
+
+    if not respuesta.get('ok'):
+        raise RuntimeError(f"El webhook rechazó la foto: {respuesta.get('error')}")
+    return respuesta
+
+
+def _achicar(datos, lado_max=2560, calidad=88):
+    """
+    Reduce la foto antes de mandarla.
+
+    Dos razones: una foto de celular de 8 MB en base64 son ~11 MB de request y
+    Apps Script se atraganta; y 100 invitados subiendo originales llenarían el
+    Drive. A 2560 px sigue siendo más grande que cualquier pantalla.
+    """
+    from PIL import Image, ImageOps
+
+    try:
+        img = ImageOps.exif_transpose(Image.open(io.BytesIO(datos)))
+        if max(img.size) <= lado_max and len(datos) < 2_000_000:
+            return datos, 'image/jpeg' if img.format == 'JPEG' else None
+        img = img.convert('RGB')
+        img.thumbnail((lado_max, lado_max), Image.LANCZOS)
+        salida = io.BytesIO()
+        img.save(salida, 'JPEG', quality=calidad, optimize=True, progressive=True)
+        return salida.getvalue(), 'image/jpeg'
+    except Exception:
+        # Si Pillow no puede con el formato, va tal cual: mejor grande que nada.
+        log.warning('No se pudo achicar la foto; se manda como vino')
+        return datos, None
+
+
 def _subir_a_drive(datos, nombre, tipo_mime='image/jpeg'):
     """Sube los bytes a la carpeta y devuelve el link para ver el archivo."""
     if not CARPETA_DRIVE:
@@ -267,15 +332,29 @@ def _trabajar():
 
 def _despachar(tipo, datos):
     if tipo == 'foto':
-        # La foto a Drive sólo si hay OAuth; la fila va igual, con link vacío.
-        link = ''
-        if CARPETA_DRIVE and hay_oauth():
+        link, rutas = '', None
+
+        if WEBHOOK_URL:
+            crudo = _bajar(datos['ruta'])
+            achicada, tipo_mime = _achicar(crudo)
+            respuesta = _subir_foto_por_webhook(
+                achicada, datos['nombre'],
+                tipo_mime or datos.get('tipo_mime', 'image/jpeg'))
+            link = respuesta.get('enDrive', '')
+            # Si la foto vivía en el disco efímero de Render, la galería tiene
+            # que dejar de apuntar ahí: ese archivo desaparece en el próximo
+            # reinicio. Desde ahora se sirve desde Drive.
+            if not datos['ruta'].startswith('http'):
+                rutas = (respuesta.get('ver', ''), respuesta.get('miniatura', ''))
+
+        elif CARPETA_DRIVE and hay_oauth():
             link = _subir_a_drive(_bajar(datos['ruta']), datos['nombre'],
                                   datos.get('tipo_mime', 'image/jpeg'))
+
         _agregar_fila('Fotos', (datos['cuando'], datos['subido_por'],
                                 datos['descripcion'], link, datos['ruta']),
                       clave=f"foto-{datos['id']}")
-        _marcar('foto', datos['id'], link or 'ok')
+        _marcar('foto', datos['id'], link or 'ok', rutas)
 
     elif tipo == 'cancion':
         _agregar_fila('Canciones', (datos['cuando'], datos['titulo'],
@@ -291,9 +370,9 @@ def _despachar(tipo, datos):
         _marcar('confirmacion', datos['id'], '')
 
 
-def _marcar(tipo, fila_id, link):
+def _marcar(tipo, fila_id, link, rutas=None):
     if _al_terminar:
         try:
-            _al_terminar(tipo, fila_id, link)
+            _al_terminar(tipo, fila_id, link, rutas)
         except Exception:
             log.exception('No se pudo marcar %s %s como replicado', tipo, fila_id)

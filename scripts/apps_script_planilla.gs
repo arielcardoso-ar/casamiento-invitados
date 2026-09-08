@@ -1,6 +1,10 @@
 /**
- * Recibe las confirmaciones, canciones y fotos del sitio y las escribe en esta
- * misma planilla.
+ * Recibe todo lo que dejan los invitados y lo guarda en tu cuenta:
+ *
+ *   confirmaciones y canciones → filas en esta misma planilla
+ *   fotos de la fiesta         → archivos en una carpeta de tu Drive
+ *
+ * Con esto solo alcanza: no hace falta Cloudinary ni ninguna otra cuenta.
  *
  * Vive adentro de la hoja, así que no hace falta proyecto en Google Cloud, ni
  * pantalla de consentimiento, ni tokens OAuth: sólo pegar esto, publicar y
@@ -47,6 +51,10 @@ function doPost(e) {
       return responder({ ok: false, error: 'token invalido' });
     }
 
+    if (datos.accion === 'foto') {
+      return guardarFoto(datos);
+    }
+
     const hoja = obtenerHoja(datos.hoja, datos.cabeceras || []);
 
     // El sitio reintenta lo que no pudo mandar. Si la fila ya entró —porque se
@@ -67,6 +75,61 @@ function doPost(e) {
 /** Para probar desde el navegador que la implementación quedó viva. */
 function doGet() {
   return responder({ ok: true, servicio: 'planilla casamiento' });
+}
+
+
+/**
+ * Guarda una foto en Drive y devuelve las URLs para mostrarla.
+ *
+ * La carpeta se crea al lado de esta planilla, así queda todo junto. El archivo
+ * se comparte "con el link" porque si no, la galería del sitio no puede
+ * mostrarlo: quien lo abre es el navegador del invitado, no el servidor.
+ */
+function guardarFoto(datos) {
+  const carpeta = obtenerCarpetaFotos();
+
+  // El sitio reintenta lo que no pudo mandar. Si el archivo ya está, no lo
+  // duplicamos: devolvemos el que había.
+  const previas = carpeta.getFilesByName(datos.nombre);
+  if (previas.hasNext()) {
+    return responder(urlsDe(previas.next(), true));
+  }
+
+  const blob = Utilities.newBlob(
+    Utilities.base64Decode(datos.contenido),
+    datos.tipo || 'image/jpeg',
+    datos.nombre
+  );
+  const archivo = carpeta.createFile(blob);
+  archivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+  return responder(urlsDe(archivo, false));
+}
+
+
+function urlsDe(archivo, duplicado) {
+  const id = archivo.getId();
+  return {
+    ok: true,
+    duplicado: duplicado,
+    id: id,
+    // Este host sirve la imagen directo y acepta un ancho, así la galería pide
+    // miniaturas livianas en vez de la foto entera.
+    ver: 'https://lh3.googleusercontent.com/d/' + id,
+    miniatura: 'https://lh3.googleusercontent.com/d/' + id + '=w600',
+    enDrive: archivo.getUrl()
+  };
+}
+
+
+function obtenerCarpetaFotos() {
+  const NOMBRE = 'Fotos del casamiento';
+  const planilla = DriveApp.getFileById(SpreadsheetApp.getActiveSpreadsheet().getId());
+  const padres = planilla.getParents();
+  const donde = padres.hasNext() ? padres.next() : DriveApp.getRootFolder();
+
+  const existentes = donde.getFoldersByName(NOMBRE);
+  return existentes.hasNext() ? existentes.next() : donde.createFolder(NOMBRE);
 }
 
 

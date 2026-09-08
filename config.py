@@ -55,6 +55,10 @@ FECHA_CORTA = _env('FECHA_CORTA',
                    f'{FECHA_EVENTO.day:02d} · {FECHA_EVENTO.month:02d} · {FECHA_ANIO}')
 HORA_CEREMONIA = _env('HORA_CEREMONIA', FECHA_EVENTO.strftime('%H:%M'))
 
+# Cuánto dura el evento en el calendario que se descarga el invitado. No se
+# muestra en ningún lado: sólo define hasta qué hora le queda bloqueado el día.
+DURACION_HORAS = int(_env('DURACION_HORAS', '8'))
+
 # ── Lugares ───────────────────────────────────────────────────────────────────
 
 CEREMONIA = {

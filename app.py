@@ -22,7 +22,7 @@ from functools import wraps
 import cloudinary
 import cloudinary.api
 import cloudinary.uploader
-from flask import (Flask, jsonify, redirect, render_template, request,
+from flask import (Flask, Response, jsonify, redirect, render_template, request,
                    send_file, send_from_directory, session, url_for)
 from werkzeug.utils import secure_filename
 
@@ -255,6 +255,61 @@ def qr_page():
     return render_template('qr.html')
 
 
+@app.route('/casamiento.ics')
+def calendario():
+    """
+    El evento para agregar al calendario del celular.
+
+    Un .ics lo entienden Google Calendar, Apple y Outlook por igual, así que
+    un solo link sirve para todos. Las horas van en UTC (la Z del final) para
+    que le caiga bien a cualquiera, esté donde esté.
+    """
+    from datetime import timedelta
+
+    def utc(momento):
+        return momento.astimezone(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+
+    inicio = config.FECHA_EVENTO
+    fin = inicio + timedelta(hours=config.DURACION_HORAS)
+
+    def escapar(texto):
+        # En iCalendar la coma, el punto y coma y la barra son separadores.
+        return (texto.replace('\\', '\\\\').replace(',', '\\,')
+                     .replace(';', '\\;').replace('\n', '\\n'))
+
+    lineas = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//casamiento//invitados//ES',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        'BEGIN:VEVENT',
+        f'UID:casamiento-{config.NOVIA_CORTO}-{config.NOVIO_CORTO}@{request.host}',
+        f'DTSTAMP:{utc(config.ahora())}',
+        f'DTSTART:{utc(inicio)}',
+        f'DTEND:{utc(fin)}',
+        f'SUMMARY:{escapar(f"Casamiento de {config.NOVIA} y {config.NOVIO}")}',
+        f'LOCATION:{escapar(config.CEREMONIA["titulo"] + " · " + config.CEREMONIA["detalle"])}',
+        f'DESCRIPTION:{escapar("Nos casamos y queremos celebrarlo con vos. " + request.url_root)}',
+        f'URL:{request.url_root}',
+        # Dos avisos: uno la semana anterior y otro tres horas antes.
+        'BEGIN:VALARM', 'TRIGGER:-P7D', 'ACTION:DISPLAY',
+        f'DESCRIPTION:{escapar(f"En una semana se casan {config.NOVIA_CORTO} y {config.NOVIO_CORTO}")}',
+        'END:VALARM',
+        'BEGIN:VALARM', 'TRIGGER:-PT3H', 'ACTION:DISPLAY',
+        f'DESCRIPTION:{escapar("¡Hoy es el casamiento!")}',
+        'END:VALARM',
+        'END:VEVENT',
+        'END:VCALENDAR',
+    ]
+
+    # CRLF y no \n: es lo que pide la especificación, y Outlook se pone quisquilloso.
+    cuerpo = '\r\n'.join(lineas) + '\r\n'
+    return Response(cuerpo, mimetype='text/calendar', headers={
+        'Content-Disposition': 'attachment; filename="casamiento.ics"',
+    })
+
+
 @app.route('/healthz')
 def healthz():
     """
@@ -270,15 +325,18 @@ def healthz():
         'ok': True,
         'abierto': config.fotos_abiertas(),
         'configurado': {
-            # Sin esto las fotos de la fiesta se guardan en disco efímero y se
-            # pierden cuando Render recicla el contenedor. Es lo más crítico.
+            # Lo verdaderamente crítico: si no hay dónde guardarlas, las fotos
+            # de la fiesta viven en disco efímero y se pierden en el próximo
+            # reinicio. Lo cubre Cloudinary o el webhook, con cualquiera basta.
+            'fotos_persisten': CLOUDINARY_ENABLED or google_sync.hay_deposito_de_fotos(),
             'cloudinary': CLOUDINARY_ENABLED,
             # Sin esto no hay forma de abrir /admin/... ni la vista previa.
             'admin_secret': bool(ADMIN_SECRET),
             # Sin esto la cookie de vista previa se cae en cada reinicio.
             'secret_key': bool(os.environ.get('SECRET_KEY')),
+            # Confirmaciones y canciones: sin esto viven sólo en el SQLite
+            # efímero y no hay ninguna otra copia.
             'planilla': google_sync.hay_planilla(),
-            'fotos_a_drive': bool(google_sync.CARPETA_DRIVE and google_sync.hay_oauth()),
         },
     })
 
