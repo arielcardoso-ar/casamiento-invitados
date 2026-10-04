@@ -11,6 +11,7 @@ Para los invitados:
 Las fotos se persisten en Cloudinary; SQLite funciona como índice local.
 """
 
+import hmac
 import io
 import os
 import threading
@@ -157,6 +158,34 @@ def limitar(maximo, ventana=3600):
     return decorador
 
 
+# ── Secreto de los novios ─────────────────────────────────────────────────────
+
+# Cuántas veces puede errar el secreto una misma IP por hora antes de que se le
+# deje de aceptar, aunque acierte. Los novios lo pegan de un link guardado y no
+# erran veinte veces; un script que prueba claves, sí.
+INTENTOS_ADMIN = 20
+
+
+def es_secreto_admin(valor):
+    """¿`valor` es ADMIN_SECRET? Con freno contra quien lo prueba a ciegas."""
+    if not ADMIN_SECRET or not valor:
+        return False
+    ahora = time.monotonic()
+    clave = f'admin-fallido:{_ip_cliente()}'
+    with _candado_tasa:
+        fallos = [t for t in _visitas.get(clave, ()) if ahora - t < 3600]
+        _visitas[clave] = fallos
+        if len(fallos) >= INTENTOS_ADMIN:
+            app.logger.warning('Secreto bloqueado para %s', _ip_cliente())
+            return False
+    # compare_digest tarda lo mismo acierte o no: no deja adivinar de a letras.
+    if hmac.compare_digest(valor.encode(), ADMIN_SECRET.encode()):
+        return True
+    with _candado_tasa:
+        _visitas.setdefault(clave, []).append(ahora)
+    return False
+
+
 # ── Apertura de la galería ────────────────────────────────────────────────────
 
 def desbloqueado():
@@ -193,7 +222,7 @@ def aplicar_pase_de_vista_previa():
     token = request.args.get('unlock')
     if token is None:
         return None
-    if ADMIN_SECRET and token == ADMIN_SECRET:
+    if token and es_secreto_admin(token):
         session['preview'] = True
     elif token == '':
         session.pop('preview', None)
@@ -663,7 +692,7 @@ def api_confirmar():
 @app.route('/admin/confirmaciones')
 def admin_confirmaciones():
     """La lista de confirmaciones. Protegida con ?secret=<ADMIN_SECRET>."""
-    if not ADMIN_SECRET or request.args.get('secret') != ADMIN_SECRET:
+    if not es_secreto_admin(request.args.get('secret')):
         return jsonify({'error': 'Forbidden'}), 403
 
     confirmaciones = db.get_confirmaciones()
@@ -686,7 +715,7 @@ def admin_google():
     `?reintentar=1` vuelve a encolar todo lo que todavía no llegó.
     `?restaurar=1` vuelve a traer desde la planilla lo que falte acá.
     """
-    if not ADMIN_SECRET or request.args.get('secret') != ADMIN_SECRET:
+    if not es_secreto_admin(request.args.get('secret')):
         return jsonify({'error': 'Forbidden'}), 403
 
     pendientes = db.pendientes_de_replica()
@@ -731,7 +760,7 @@ def admin_google():
 @app.route('/admin/canciones')
 def admin_canciones():
     """La lista para armar la playlist. Protegida con ?secret=<ADMIN_SECRET>."""
-    if not ADMIN_SECRET or request.args.get('secret') != ADMIN_SECRET:
+    if not es_secreto_admin(request.args.get('secret')):
         return jsonify({'error': 'Forbidden'}), 403
 
     # Agrupadas por tema: si tres personas piden la misma, se ve de una.
@@ -857,7 +886,7 @@ def _recuperar_indice_si_hace_falta():
 @app.route('/admin/sync-from-cloudinary')
 def sync_from_cloudinary():
     """Reconstrucción manual del índice. Protegida con ?secret=<ADMIN_SECRET>."""
-    if not ADMIN_SECRET or request.args.get('secret') != ADMIN_SECRET:
+    if not es_secreto_admin(request.args.get('secret')):
         return jsonify({'error': 'Forbidden'}), 403
     if not CLOUDINARY_ENABLED:
         return jsonify({'error': 'Cloudinary no configurado'}), 400
@@ -873,7 +902,72 @@ def sync_from_cloudinary():
 
 @app.route('/uploads/<path:filename>')
 def serve_upload(filename):
+    # Las fotos de la fiesta siguen la misma regla que la galería.
+    if not fotos_habilitadas():
+        return no_encontrado(None)
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+
+
+# ── Cabeceras de seguridad ────────────────────────────────────────────────────
+
+# Lo que llega al navegador (fotos, video, HTML) siempre se puede guardar: esto
+# no lo impide. Lo que sí hace es que otros sitios no puedan mostrar nuestras
+# fotos ni meter el sitio adentro de un marco, y que los buscadores no lo
+# indexen. La invitación se comparte por WhatsApp, no por Google.
+
+# Fotos y video de los novios y de la fiesta: sólo las puede pedir una página
+# de este mismo sitio. Otro sitio que las enlace (hotlinking) recibe un error.
+# A los robots de vista previa (WhatsApp) no les afecta: no son navegadores.
+_SOLO_ESTE_SITIO = ('/static/img/', '/static/video/', '/uploads/')
+
+_CSP = ("frame-ancestors 'none'; object-src 'none'; base-uri 'self'; "
+        "form-action 'self'")
+
+
+@app.after_request
+def cabeceras_de_seguridad(respuesta):
+    h = respuesta.headers
+    h.setdefault('X-Content-Type-Options', 'nosniff')
+    h.setdefault('X-Frame-Options', 'DENY')
+    h.setdefault('Content-Security-Policy', _CSP)
+    h.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+    h.setdefault('Permissions-Policy',
+                 'camera=(), microphone=(), geolocation=(), payment=()')
+    h.setdefault('Cross-Origin-Opener-Policy', 'same-origin')
+    h.setdefault('X-Robots-Tag', 'noindex, nofollow, noarchive, noimageindex')
+    if request.is_secure or request.headers.get('X-Forwarded-Proto') == 'https':
+        h.setdefault('Strict-Transport-Security', 'max-age=31536000')
+    if request.path.startswith(_SOLO_ESTE_SITIO):
+        h['Cross-Origin-Resource-Policy'] = 'same-origin'
+    if request.path.startswith('/admin/'):
+        # Las listas de invitados no se guardan en ningún caché.
+        h['Cache-Control'] = 'no-store'
+        h['Referrer-Policy'] = 'no-referrer'
+    return respuesta
+
+
+# Los robots de vista previa (WhatsApp, Telegram, etc.) pueden leer la portada
+# para armar la tarjeta del link; el resto, nada. Lo respetan los buscadores
+# serios; los que no, igual se topan con el X-Robots-Tag de arriba.
+ROBOTS = """User-agent: facebookexternalhit
+User-agent: Facebot
+User-agent: WhatsApp
+User-agent: TelegramBot
+User-agent: Twitterbot
+User-agent: Slackbot-LinkExpanding
+Allow: /$
+Allow: /static/img/og.jpg
+Disallow: /
+
+User-agent: *
+Disallow: /
+"""
+
+
+@app.route('/robots.txt')
+def robots():
+    return Response(ROBOTS, mimetype='text/plain')
 
 
 if __name__ == '__main__':

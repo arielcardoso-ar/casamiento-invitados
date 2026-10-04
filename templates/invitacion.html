@@ -93,6 +93,12 @@
         background: radial-gradient(ellipse 45% 50% at 50% 50%, rgba(253, 252, 249, .55) 0%, transparent 100%);
     }
     @media (prefers-reduced-motion: reduce) { .hero-video { display: none; } }
+    /* Las fotos y el video de fondo no se arrastran ni abren el menú de
+       "guardar imagen". No impide guardarlas a quien insista; frena al casual. */
+    .hero-video, .polaroid img {
+        pointer-events: none;
+        -webkit-user-drag: none; user-select: none; -webkit-touch-callout: none;
+    }
     /* Grano sutil de papel */
     .hero-bg::after {
         content: ''; position: absolute; inset: 0; opacity: .45;
@@ -1363,6 +1369,13 @@
         })(anterior);
     }
 })();
+</script>
+<script>
+// Sin "Guardar imagen como…" ni arrastrar sobre las fotos y el video de los
+// novios. Sólo acá: en la galería los invitados sí pueden bajarse las fotos.
+['contextmenu', 'dragstart'].forEach(evento => document.addEventListener(evento, e => {
+    if (e.target.closest && e.target.closest('img, video, .hero-bg, .polaroid')) e.preventDefault();
+}));
 </script>
 </body>
 </html>
