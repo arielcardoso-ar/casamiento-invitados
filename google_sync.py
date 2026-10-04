@@ -48,8 +48,10 @@ CARPETA_DRIVE = os.environ.get('DRIVE_FOLDER_ID', '')
 PLANILLA = os.environ.get('SHEET_ID', '')
 
 # Camino A: el webhook publicado desde la propia planilla.
-WEBHOOK_URL = os.environ.get('SHEET_WEBHOOK_URL', '')
-WEBHOOK_TOKEN = os.environ.get('SHEET_WEBHOOK_TOKEN', '')
+# .strip(): al pegar en el panel de Render es fácil arrastrar un espacio o un
+# salto de línea, y el script lo rechaza como "token invalido".
+WEBHOOK_URL = os.environ.get('SHEET_WEBHOOK_URL', '').strip()
+WEBHOOK_TOKEN = os.environ.get('SHEET_WEBHOOK_TOKEN', '').strip()
 
 TOKEN_URI = 'https://oauth2.googleapis.com/token'
 ALCANCES = ('https://www.googleapis.com/auth/drive.file',
