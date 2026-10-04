@@ -101,6 +101,7 @@ def estado():
         'activo': configurado(),
         'en_cola': _cola.qsize() if _cola else 0,
         'ultima_restauracion': dict(ultima_restauracion),
+        'ultimo_envio': dict(ultimo_envio),
     }
 
 
@@ -328,14 +329,29 @@ def encolar(tipo, **datos):
         return False
 
 
+ultimo_envio = {}
+
+
+def _anotar(tipo, error=None):
+    """Lo que muestra /healthz. Sólo el tipo y el error: nunca datos del invitado."""
+    from datetime import datetime
+    ultimo_envio.clear()
+    ultimo_envio.update(tipo=tipo, ok=error is None,
+                        cuando=datetime.utcnow().isoformat(timespec='seconds'))
+    if error is not None:
+        ultimo_envio['error'] = f'{type(error).__name__}: {error}'[:200]
+
+
 def _trabajar():
     while True:
         tipo, datos = _cola.get()
         try:
             _despachar(tipo, datos)
-        except Exception:
+            _anotar(tipo)
+        except Exception as e:
             # Queda sin marcar en la base: /admin/google lo reintenta.
             log.exception('No se pudo replicar %s en Google', tipo)
+            _anotar(tipo, e)
         finally:
             _cola.task_done()
 
