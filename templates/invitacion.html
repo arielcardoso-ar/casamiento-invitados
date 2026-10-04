@@ -1268,7 +1268,7 @@
             ['#f6d3d5', '#e5a2a8'], ['#fbe6e6', '#eebbbc'], ['#f0c4c7', '#d98d97'],
             ['#dbe6cc', '#b4caa4'], ['#fdeeed', '#f2cccd'],
         ];
-        const CANTIDAD = window.innerWidth < 640 ? 12 : 22;
+        const CANTIDAD = window.innerWidth < 640 ? 45 : 90;
 
         window.addEventListener('resize', () => {
             W = window.innerWidth; H = window.innerHeight;
@@ -1292,7 +1292,7 @@
             return {
                 el,
                 x: Math.random() * 100,                    // % del ancho
-                y: -(40 + Math.random() * H * 1.3),        // posición en el "mundo"
+                y: Math.random() * H * 1.4 - H * 0.3,       // ya repartidos por la pantalla al abrir
                 vel: 34 + Math.random() * 58,              // px/s de caída
                 arrastre: 0.6 + Math.random() * 0.8,       // cuánto le pega la brisa
                 giro: Math.random() * 360,
@@ -1318,7 +1318,7 @@
             p.fase += p.vaiven * dt;
 
             if (p.y > H * 1.15) {                   // reciclar desde arriba
-                p.y = -(30 + Math.random() * 100);
+                p.y = -(30 + Math.random() * H * 0.3);
                 p.x = Math.random() * 100;
             }
             if (p.x < -8)  p.x += 116;              // envolver de lado a lado
