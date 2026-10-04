@@ -28,7 +28,7 @@ from werkzeug.utils import secure_filename
 
 import config
 import google_sync
-from database import CasamientoDatabase
+from database import CasamientoDatabase, nueva_clave
 
 # HEIC/HEIF de iPhone: sin esto Pillow no puede abrirlos en el modo local.
 try:
@@ -78,7 +78,13 @@ db = CasamientoDatabase()
 
 # Réplica en Drive/Sheets. Si no hay credenciales cargadas no arranca nada y el
 # sitio funciona igual: es un espejo, no una dependencia.
-google_sync.iniciar(al_terminar=db.marcar_replicado)
+google_sync.iniciar(al_terminar=db.marcar_replicado,
+                    carpeta_subidas=app.config['UPLOAD_FOLDER'])
+
+# El SQLite vive en el disco efímero de Render: después de cada reinicio o
+# deploy arranca vacío. La planilla es la copia que sobrevive, así que al
+# arrancar traemos de vuelta confirmaciones, canciones y fotos.
+google_sync.restaurar_en_segundo_plano(db.restaurar)
 
 
 # ── Límite de tasa ────────────────────────────────────────────────────────────
@@ -430,7 +436,7 @@ def _extension_ok(filename: str) -> bool:
 
 
 def _subir_a_cloudinary(datos: bytes, nombre_original: str,
-                        subido_por: str, descripcion: str) -> dict:
+                        subido_por: str, descripcion: str, clave: str) -> dict:
     public_id = (f"{CLOUDINARY_FOLDER}/"
                  f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}")
 
@@ -445,6 +451,9 @@ def _subir_a_cloudinary(datos: bytes, nombre_original: str,
             'subido_por': subido_por,
             'descripcion': descripcion,
             'nombre_original': nombre_original,
+            # Para que el índice reconstruido desde Cloudinary reconozca la
+            # fila de la planilla y no la vuelva a mandar.
+            'clave': clave,
         },
     )
 
@@ -488,8 +497,10 @@ def _procesar(archivo, subido_por: str, descripcion: str) -> int:
     if len(datos) > MAX_FOTO_BYTES:
         raise ValueError('la foto supera los 25 MB')
 
+    clave = nueva_clave('foto')
     if CLOUDINARY_ENABLED:
-        urls = _subir_a_cloudinary(datos, archivo.filename, subido_por, descripcion)
+        urls = _subir_a_cloudinary(datos, archivo.filename, subido_por, descripcion,
+                                   clave)
     else:
         urls = _guardar_local(datos, archivo.filename)
 
@@ -500,10 +511,11 @@ def _procesar(archivo, subido_por: str, descripcion: str) -> int:
         'thumbnail': urls['thumbnail'],
         'subido_por': subido_por,
         'descripcion': descripcion,
+        'clave': clave,
     })
 
     google_sync.encolar(
-        'foto', id=foto_id, ruta=urls['ruta'],
+        'foto', id=foto_id, clave=clave, ruta=urls['ruta'],
         nombre=_nombre_para_drive(archivo.filename, subido_por),
         tipo_mime=_tipo_mime(urls['ruta']),
         cuando=config.ahora().strftime('%d/%m/%Y %H:%M'),
@@ -580,7 +592,8 @@ def api_sugerir_cancion():
         app.logger.exception('Error guardando la canción')
         return jsonify({'success': False, 'message': 'No se pudo guardar. Probá de nuevo.'}), 500
 
-    google_sync.encolar('cancion', id=cancion_id, titulo=titulo, artista=artista,
+    google_sync.encolar('cancion', id=cancion_id,
+                        clave=db.clave_de('cancion', cancion_id), titulo=titulo, artista=artista,
                         sugerido_por=sugerido_por,
                         cuando=config.ahora().strftime('%d/%m/%Y %H:%M'))
 
@@ -622,6 +635,7 @@ def api_confirmar():
                         'message': 'No se pudo guardar. Probá de nuevo.'}), 500
 
     google_sync.encolar('confirmacion', id=confirmacion_id,
+                        clave=db.clave_de('confirmacion', confirmacion_id),
                         cuando=config.ahora().strftime('%d/%m/%Y %H:%M'),
                         nombre=nombre,
                         asiste='Sí' if asiste else 'No',
@@ -655,6 +669,7 @@ def admin_google():
     """
     Estado del espejo en Drive y reintento de lo que quedó pendiente.
     `?reintentar=1` vuelve a encolar todo lo que todavía no llegó.
+    `?restaurar=1` vuelve a traer desde la planilla lo que falte acá.
     """
     if not ADMIN_SECRET or request.args.get('secret') != ADMIN_SECRET:
         return jsonify({'error': 'Forbidden'}), 403
@@ -669,7 +684,7 @@ def admin_google():
         encolados = 0
         for foto in pendientes['fotos']:
             encolados += bool(google_sync.encolar(
-                'foto', id=foto['id'], ruta=foto['ruta'],
+                'foto', id=foto['id'], clave=foto['clave'], ruta=foto['ruta'],
                 nombre=_nombre_para_drive(foto['nombre_original'],
                                           foto['subido_por'] or 'Invitado'),
                 tipo_mime=_tipo_mime(foto['ruta']),
@@ -678,19 +693,22 @@ def admin_google():
                 descripcion=foto['descripcion'] or ''))
         for cancion in pendientes['canciones']:
             encolados += bool(google_sync.encolar(
-                'cancion', id=cancion['id'], titulo=cancion['titulo'],
+                'cancion', id=cancion['id'], clave=cancion['clave'], titulo=cancion['titulo'],
                 artista=cancion['artista'] or '',
                 sugerido_por=cancion['sugerido_por'] or '',
                 cuando=_hora_local(cancion['fecha'])))
         for confirmacion in pendientes['confirmaciones']:
             encolados += bool(google_sync.encolar(
-                'confirmacion', id=confirmacion['id'],
+                'confirmacion', id=confirmacion['id'], clave=confirmacion['clave'],
                 cuando=_hora_local(confirmacion['fecha']),
                 nombre=confirmacion['nombre'],
                 asiste='Sí' if confirmacion['asiste'] else 'No',
                 restricciones=confirmacion['restricciones'] or '',
                 mensaje=confirmacion['mensaje'] or ''))
         respuesta['reencolados'] = encolados
+
+    if request.args.get('restaurar') and google_sync.hay_planilla():
+        respuesta['restaurados'] = google_sync.restaurar(db.restaurar)
 
     return jsonify(respuesta)
 
@@ -763,8 +781,10 @@ def error_interno(e):
 
 def _sincronizar_desde_cloudinary():
     """Vuelca en SQLite todo lo que haya en la carpeta de Cloudinary."""
+    # Sólo se reemplazan las que viven en Cloudinary: las que vinieron de Drive
+    # (restauradas desde la planilla) no están ahí y se perderían.
     conn = db.get_connection()
-    conn.execute('DELETE FROM fotos')
+    conn.execute("DELETE FROM fotos WHERE ruta LIKE '%res.cloudinary.com%'")
     conn.commit()
     conn.close()
 
@@ -786,6 +806,7 @@ def _sincronizar_desde_cloudinary():
                 'thumbnail': _thumbnail_url(url),
                 'subido_por': ctx.get('subido_por', 'Invitado'),
                 'descripcion': ctx.get('descripcion', ''),
+                'clave': ctx.get('clave'),
             })
             importadas += 1
 

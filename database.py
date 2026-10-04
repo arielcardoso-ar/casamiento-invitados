@@ -5,7 +5,23 @@ Base de datos para el casamiento - SQLite
 
 import sqlite3
 import json
+import uuid
 from datetime import datetime
+
+
+def nueva_clave(tipo):
+    """
+    Identificador de un registro en la planilla ("confirmacion-3f9a…").
+
+    No puede ser el ID de SQLite: el disco de Render es efímero, el ID vuelve a
+    arrancar en 1 después de cada reinicio, y la planilla tomaría la nueva
+    "confirmacion-1" por un reintento de la vieja y la descartaría sin avisar.
+    """
+    return f'{tipo}-{uuid.uuid4().hex[:16]}'
+
+# Tabla de SQLite de cada tipo que se replica en la planilla.
+TABLAS_REPLICADAS = {'foto': 'fotos', 'cancion': 'canciones',
+                     'confirmacion': 'confirmaciones'}
 
 class CasamientoDatabase:
     def __init__(self, db_path='casamiento.db'):
@@ -159,6 +175,16 @@ class CasamientoDatabase:
         self._asegurar_columna(cursor, 'fotos', 'drive_link', 'TEXT')
         self._asegurar_columna(cursor, 'canciones', 'replicado', 'INTEGER DEFAULT 0')
         self._asegurar_columna(cursor, 'confirmaciones', 'replicado', 'INTEGER DEFAULT 0')
+
+        # La clave con la que cada registro viaja a la planilla. Las filas
+        # viejas heredan la que usaban antes ("cancion-12"), que es la que ya
+        # quedó escrita en la planilla.
+        for tipo, tabla in TABLAS_REPLICADAS.items():
+            self._asegurar_columna(cursor, tabla, 'clave', 'TEXT')
+            cursor.execute(f"UPDATE {tabla} SET clave = ? || '-' || id "
+                           f"WHERE clave IS NULL OR clave = ''", (tipo,))
+            cursor.execute(f'CREATE UNIQUE INDEX IF NOT EXISTS {tabla}_clave '
+                           f'ON {tabla}(clave)')
 
         conn.commit()
         conn.close()
@@ -491,15 +517,16 @@ class CasamientoDatabase:
         
         cursor.execute('''
             INSERT INTO fotos (nombre_archivo, nombre_original, ruta, thumbnail, 
-                             subido_por, descripcion)
-            VALUES (?, ?, ?, ?, ?, ?)
+                             subido_por, descripcion, clave)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (
             datos['nombre_archivo'],
             datos['nombre_original'],
             datos['ruta'],
             datos.get('thumbnail', ''),
             datos.get('subido_por', 'Invitado'),
-            datos.get('descripcion', '')
+            datos.get('descripcion', ''),
+            datos.get('clave') or nueva_clave('foto'),
         ))
         
         foto_id = cursor.lastrowid
@@ -542,8 +569,9 @@ class CasamientoDatabase:
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute(
-            'INSERT INTO canciones (titulo, artista, sugerido_por) VALUES (?, ?, ?)',
-            (titulo, artista, sugerido_por))
+            'INSERT INTO canciones (titulo, artista, sugerido_por, clave) '
+            'VALUES (?, ?, ?, ?)',
+            (titulo, artista, sugerido_por, nueva_clave('cancion')))
         cancion_id = cursor.lastrowid
         conn.commit()
         conn.close()
@@ -574,14 +602,15 @@ class CasamientoDatabase:
         cursor = conn.cursor()
         cursor.execute('''
             INSERT INTO confirmaciones
-                (nombre, asiste, acompanantes, restricciones, mensaje)
-            VALUES (?, ?, ?, ?, ?)
+                (nombre, asiste, acompanantes, restricciones, mensaje, clave)
+            VALUES (?, ?, ?, ?, ?, ?)
         ''', (
             datos['nombre'],
             1 if datos.get('asiste', True) else 0,
             int(datos.get('acompanantes') or 0),
             datos.get('restricciones', ''),
             datos.get('mensaje', ''),
+            nueva_clave('confirmacion'),
         ))
         confirmacion_id = cursor.lastrowid
         conn.commit()
@@ -629,20 +658,76 @@ class CasamientoDatabase:
         conn = self.get_connection()
         pendientes = {
             'fotos': [dict(f) for f in conn.execute(
-                'SELECT id, ruta, nombre_original, subido_por, descripcion, fecha_subida '
+                'SELECT id, clave, ruta, nombre_original, subido_por, descripcion, fecha_subida '
                 'FROM fotos WHERE drive_link IS NULL OR drive_link = "" '
                 'ORDER BY id').fetchall()],
             'canciones': [dict(f) for f in conn.execute(
-                'SELECT id, titulo, artista, sugerido_por, fecha '
+                'SELECT id, clave, titulo, artista, sugerido_por, fecha '
                 'FROM canciones WHERE replicado IS NULL OR replicado = 0 '
                 'ORDER BY id').fetchall()],
             'confirmaciones': [dict(f) for f in conn.execute(
-                'SELECT id, nombre, asiste, acompanantes, restricciones, mensaje, fecha '
+                'SELECT id, clave, nombre, asiste, acompanantes, restricciones, mensaje, fecha '
                 'FROM confirmaciones WHERE replicado IS NULL OR replicado = 0 '
                 'ORDER BY id').fetchall()],
         }
         conn.close()
         return pendientes
+
+    def clave_de(self, tipo, fila_id):
+        """La clave con la que esa fila viaja a la planilla."""
+        conn = self.get_connection()
+        fila = conn.execute(
+            f'SELECT clave FROM {TABLAS_REPLICADAS[tipo]} WHERE id = ?',
+            (fila_id,)).fetchone()
+        conn.close()
+        return fila['clave'] if fila else f'{tipo}-{fila_id}'
+
+    # ========== RESTAURACIÓN DESDE LA PLANILLA ==========
+
+    def restaurar(self, tipo, registros):
+        """
+        Vuelve a cargar en SQLite lo que está en la planilla y falta acá.
+
+        Después de un reinicio de Render el SQLite arranca vacío; la planilla
+        es la copia que sobrevive. Cada registro trae su `clave`: si ya está
+        en la base no se toca, así que se puede correr las veces que haga
+        falta. Lo restaurado queda marcado como replicado, porque ya está allá.
+        Devuelve cuántos registros entraron.
+        """
+        conn = self.get_connection()
+        nuevos = 0
+        for r in registros:
+            if tipo == 'cancion':
+                sql = ('INSERT OR IGNORE INTO canciones '
+                       '(titulo, artista, sugerido_por, fecha, replicado, clave) '
+                       'VALUES (?, ?, ?, ?, 1, ?)')
+                valores = (r['titulo'], r.get('artista', ''),
+                           r.get('sugerido_por', ''), r['fecha'], r['clave'])
+            elif tipo == 'confirmacion':
+                sql = ('INSERT OR IGNORE INTO confirmaciones '
+                       '(nombre, asiste, acompanantes, restricciones, mensaje, '
+                       ' fecha, replicado, clave) '
+                       'VALUES (?, ?, 0, ?, ?, ?, 1, ?)')
+                valores = (r['nombre'], 1 if r.get('asiste', True) else 0,
+                           r.get('restricciones', ''), r.get('mensaje', ''),
+                           r['fecha'], r['clave'])
+            elif tipo == 'foto':
+                sql = ('INSERT OR IGNORE INTO fotos '
+                       '(nombre_archivo, nombre_original, ruta, thumbnail, '
+                       ' subido_por, descripcion, fecha_subida, drive_link, clave) '
+                       'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+                valores = (r.get('nombre_archivo') or r['clave'],
+                           r.get('nombre_original') or r['clave'],
+                           r['ruta'], r.get('thumbnail') or r['ruta'],
+                           r.get('subido_por') or 'Invitado',
+                           r.get('descripcion', ''), r['fecha'],
+                           r.get('drive_link') or 'ok', r['clave'])
+            else:
+                continue
+            nuevos += conn.execute(sql, valores).rowcount
+        conn.commit()
+        conn.close()
+        return nuevos
 
 
 if __name__ == '__main__':

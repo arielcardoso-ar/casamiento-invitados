@@ -4,6 +4,13 @@
  *   confirmaciones y canciones → filas en esta misma planilla
  *   fotos de la fiesta         → archivos en una carpeta de tu Drive
  *
+ * Y se lo devuelve al sitio cuando lo pide ('leer'): el disco de Render se
+ * borra en cada reinicio y esta planilla es la copia que sobrevive.
+ *
+ * Si ya lo tenías publicado y pegás una versión nueva: Implementar →
+ * Gestionar implementaciones → ✏ → Versión: Nueva versión → Implementar. Así
+ * la URL /exec sigue siendo la misma y no hay que tocar Render.
+ *
  * Con esto solo alcanza: no hace falta Cloudinary ni ninguna otra cuenta.
  *
  * Vive adentro de la hoja, así que no hace falta proyecto en Google Cloud, ni
@@ -55,6 +62,10 @@ function doPost(e) {
       return guardarFoto(datos);
     }
 
+    if (datos.accion === 'leer') {
+      return leerHoja(datos.hoja);
+    }
+
     const hoja = obtenerHoja(datos.hoja, datos.cabeceras || []);
 
     // El sitio reintenta lo que no pudo mandar. Si la fila ya entró —porque se
@@ -104,6 +115,28 @@ function guardarFoto(datos) {
   archivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 
   return responder(urlsDe(archivo, false));
+}
+
+
+/**
+ * Todas las filas de una pestaña, como objetos {cabecera: valor}. La columna
+ * oculta del final viaja como 'id'. Se leen los valores tal como se ven
+ * (getDisplayValues) para que las fechas no cambien de huso en el camino.
+ */
+function leerHoja(nombre) {
+  const hoja = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(nombre);
+  if (!hoja || hoja.getLastRow() < 2) {
+    return responder({ ok: true, filas: [] });
+  }
+  const valores = hoja.getRange(1, 1, hoja.getLastRow(), hoja.getLastColumn())
+    .getDisplayValues();
+  const cabeceras = valores[0];
+  const filas = valores.slice(1).map(function (fila) {
+    const objeto = {};
+    cabeceras.forEach(function (cabecera, i) { objeto[cabecera] = fila[i]; });
+    return objeto;
+  });
+  return responder({ ok: true, filas: filas });
 }
 
 
