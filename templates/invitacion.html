@@ -563,7 +563,7 @@
 <nav class="top-nav" id="topNav" aria-label="Accesos rápidos">
     <a href="/fotos"><span class="ico" aria-hidden="true">📷</span> Fotos{% if not fotos_abiertas %} <span class="lock" aria-label="se habilita el día del evento">🔒</span>{% endif %}</a>
     <a href="/galeria"><span class="ico" aria-hidden="true">🖼️</span> Galería{% if not fotos_abiertas %} <span class="lock" aria-label="se habilita el día del evento">🔒</span>{% endif %}</a>
-    <a href="/regalo"><span class="ico" aria-hidden="true">🎁</span> Regalo</a>
+    <a href="/regalo"><span class="ico" aria-hidden="true">🎁</span> Regalo{% if not regalo_abierto %} <span class="lock" aria-label="se habilita el día del evento">🔒</span>{% endif %}</a>
 </nav>
 
 <div class="petals" id="petals" aria-hidden="true"></div>
@@ -968,6 +968,7 @@
             <span class="emoji" aria-hidden="true">🎁</span>
             <span class="t">Regalo</span>
             <span class="d">Si querés ayudarnos con la luna de miel, acá está el alias.</span>
+            {% if not regalo_abierto %}<span class="badge">Se abre el {{ fecha_corta }}</span>{% endif %}
         </a>
     </div>
 </section>
