@@ -169,6 +169,11 @@ def fotos_habilitadas():
     return config.fotos_abiertas() or desbloqueado()
 
 
+def regalo_habilitado():
+    """La página del regalo está abierta para este visitante."""
+    return config.regalo_abierto() or desbloqueado()
+
+
 def requiere_apertura(f):
     """Bloquea un endpoint de API hasta que se habiliten las fotos."""
     @wraps(f)
@@ -221,6 +226,7 @@ def _fuente_qr_mp():
 def inyectar_contexto():
     ctx = config.contexto()
     ctx['fotos_abiertas'] = fotos_habilitadas()
+    ctx['regalo_abierto'] = regalo_habilitado()
     ctx['segundos_para_apertura'] = config.segundos_para_apertura()
     ctx['vista_previa'] = desbloqueado()
     ctx['mp_qr_src'] = _fuente_qr_mp()
@@ -260,6 +266,16 @@ def galeria():
 
 @app.route('/regalo')
 def regalo():
+    if not regalo_habilitado():
+        return render_template('bloqueado.html',
+                               pestania='Regalo',
+                               titulo='El regalo se habilita el día del casamiento',
+                               copy='Por ahora lo único que nos importa es que '
+                                    'vengas. Ese día vas a encontrar acá el alias.',
+                               apertura_iso=config.APERTURA_REGALO.isoformat(),
+                               pista='Tip: guardá la página en la pantalla de inicio '
+                                     'de tu celular. El día del casamiento se '
+                                     'habilita sola.'), 200
     return render_template('regalo.html')
 
 

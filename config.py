@@ -254,6 +254,16 @@ def fotos_abiertas(momento=None):
     return True
 
 
+# El regalo tampoco se muestra antes de tiempo: abre con las fotos salvo que se
+# indique otra fecha. A diferencia de la subida, una vez abierto no se cierra.
+APERTURA_REGALO = _env_dt('APERTURA_REGALO', APERTURA_FOTOS.isoformat())
+
+
+def regalo_abierto(momento=None):
+    """¿Ya se puede ver la página del regalo?"""
+    return (momento or ahora()) >= APERTURA_REGALO
+
+
 def segundos_para_apertura(momento=None):
     """Segundos que faltan para la apertura (0 si ya abrió)."""
     momento = momento or ahora()

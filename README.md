@@ -9,7 +9,7 @@ Sitio público del casamiento. Cuatro cosas, ninguna más:
 | `/` | La invitación: cuenta regresiva, lugares, cómo llegar y RSVP por WhatsApp. |
 | `/fotos` | Los invitados suben fotos desde el celular. **Cerrado hasta el evento.** |
 | `/galeria` | Álbum compartido con todo lo que suben. **Cerrado hasta el evento.** |
-| `/regalo` | Alias de Mercado Pago con copiado en un toque. |
+| `/regalo` | Alias de Mercado Pago con copiado en un toque. **Cerrado hasta el evento.** |
 
 Y dentro de la invitación, dos bloques abiertos desde ahora (no esperan al
 evento): **confirmar asistencia** y **sugerir una canción** para la playlist.
@@ -128,6 +128,7 @@ tocar el código.
 |---|---|---|
 | `FECHA_EVENTO` | Fecha y hora de la ceremonia (ISO, hora de Argentina). Manda la cuenta regresiva. | `2027-01-16T17:30:00` |
 | `APERTURA_FOTOS` | Cuándo se habilitan galería y subida. | igual que `FECHA_EVENTO` |
+| `APERTURA_REGALO` | Cuándo se habilita `/regalo`. Una vez abierto no se cierra. | igual que `APERTURA_FOTOS` |
 | `DIAS_SUBIDA_ABIERTA` | Días que siguen abiertas después del evento (`0` = para siempre). | `0` |
 | `MP_ALIAS` | Alias de Mercado Pago. | `arielcardoso.mp` |
 | `MP_CVU` | CVU para transferencia bancaria, opcional. | vacío |
