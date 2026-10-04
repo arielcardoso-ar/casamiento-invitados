@@ -344,6 +344,14 @@ def healthz():
             # efímero y no hay ninguna otra copia.
             'planilla': google_sync.hay_planilla(),
         },
+        # Cómo viene la réplica en la planilla: el último envío y la última
+        # restauración, con el error si lo hubo. Sin nombres ni contenidos.
+        'replica': {
+            'activa': google_sync.estado()['activo'],
+            'en_cola': google_sync.estado()['en_cola'],
+            'ultimo_envio': dict(google_sync.ultimo_envio),
+            'ultima_restauracion': dict(google_sync.ultima_restauracion),
+        },
     })
 
 
