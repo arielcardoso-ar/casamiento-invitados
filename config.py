@@ -73,9 +73,10 @@ CEREMONIA = {
 
 FIESTA = {
     'titulo': _env('FIESTA_TITULO', 'Salón Ble'),
-    'detalle': _env('FIESTA_DETALLE', 'A continuación de la ceremonia'),
-    'hora': _env('FIESTA_HORA', ''),
-    'query': _env('FIESTA_MAPA', 'Salón Ble, Buenos Aires'),
+    'detalle': _env('FIESTA_DETALLE', 'Av. Francisco Beiró 4526 · Villa Devoto'),
+    'hora': _env('FIESTA_HORA', '19:30'),
+    'query': _env('FIESTA_MAPA',
+                  'Ble Eventos, Av. Francisco Beiró 4526, Villa Devoto, Buenos Aires'),
 }
 
 # ── Contacto / RSVP ───────────────────────────────────────────────────────────
