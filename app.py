@@ -87,6 +87,13 @@ google_sync.iniciar(al_terminar=db.marcar_replicado,
 google_sync.restaurar_en_segundo_plano(db.restaurar)
 
 
+@app.before_request
+def despertar_replica():
+    # Los hilos de la réplica tienen que vivir en el proceso que atiende los
+    # pedidos, no en el que importó la app (ver google_sync.despertar).
+    google_sync.despertar()
+
+
 # ── Límite de tasa ────────────────────────────────────────────────────────────
 
 # Los tres POST son públicos y dos de ellos escriben en la planilla de Google:

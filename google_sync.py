@@ -301,24 +301,61 @@ def _bajar(ruta):
 # ── Cola en segundo plano ─────────────────────────────────────────────────────
 
 _cola = None
-_al_terminar = None
-CARPETA_SUBIDAS = ''   # dónde guarda app.py las fotos sin Cloudinary    # callback(tipo, id, link) para marcar la fila en SQLite
+_al_terminar = None    # callback(tipo, id, link) para marcar la fila en SQLite
+CARPETA_SUBIDAS = ''   # dónde guarda app.py las fotos sin Cloudinary
+
+# Los hilos no sobreviven a un fork. Si gunicorn importa la app en el proceso
+# maestro (--preload, o varios workers) y después forkea, el worker que atiende
+# los pedidos hereda la cola pero no el hilo que la vacía: los envíos quedan
+# encolados para siempre y nunca llegan a la planilla. Por eso los hilos se
+# arrancan en el proceso que los usa, y se vuelven a arrancar si cambió el pid.
+_pid_hilo = None
+_pid_restauracion = None
+_guardar_restaurado = None
+_candado_hilos = threading.Lock()
 
 
 def iniciar(al_terminar=None, carpeta_subidas=''):
-    """Arranca el hilo que vacía la cola. Se llama una vez, desde app.py."""
-    global _cola, _al_terminar, CARPETA_SUBIDAS
+    """Deja lista la réplica. Se llama una vez, desde app.py."""
+    global _al_terminar, CARPETA_SUBIDAS
     CARPETA_SUBIDAS = carpeta_subidas
-    if _cola is not None or not configurado():
-        return
     _al_terminar = al_terminar
-    _cola = queue.Queue(maxsize=500)
-    threading.Thread(target=_trabajar, name='google-sync', daemon=True).start()
-    log.info('Réplica en Google activada')
+    _asegurar_hilo()
+
+
+def _asegurar_hilo():
+    """Arranca el hilo que vacía la cola en este proceso, si todavía no corre."""
+    global _cola, _pid_hilo
+    if not configurado() or _pid_hilo == os.getpid():
+        return
+    with _candado_hilos:
+        if _pid_hilo == os.getpid():
+            return
+        _cola = queue.Queue(maxsize=500)
+        _pid_hilo = os.getpid()
+        threading.Thread(target=_trabajar, name='google-sync', daemon=True).start()
+    log.info('Réplica en Google activada (pid %s)', _pid_hilo)
+
+
+def despertar():
+    """
+    Se llama en cada pedido: barato si ya está todo andando. Asegura el hilo de
+    envíos y, la primera vez en este proceso, la restauración desde la planilla.
+    """
+    global _pid_restauracion
+    _asegurar_hilo()
+    if _guardar_restaurado and _pid_restauracion != os.getpid() and hay_planilla():
+        with _candado_hilos:
+            if _pid_restauracion == os.getpid():
+                return
+            _pid_restauracion = os.getpid()
+        threading.Thread(target=restaurar, args=(_guardar_restaurado,),
+                         name='restaurar-planilla', daemon=True).start()
 
 
 def encolar(tipo, **datos):
     """Agenda un envío. Si no hay nada configurado, no hace nada."""
+    _asegurar_hilo()
     if _cola is None:
         return False
     try:
@@ -553,10 +590,12 @@ def restaurar(guardar):
 
 
 def restaurar_en_segundo_plano(guardar):
-    """Arranca restaurar() sin demorar el arranque del sitio."""
-    if hay_planilla():
-        threading.Thread(target=restaurar, args=(guardar,),
-                         name='restaurar-planilla', daemon=True).start()
+    """
+    Deja agendado restaurar(): corre en segundo plano con el primer pedido que
+    atienda cada proceso (ver despertar), sin demorar el arranque del sitio.
+    """
+    global _guardar_restaurado
+    _guardar_restaurado = guardar
 
 
 def _marcar(tipo, fila_id, link, rutas=None):
