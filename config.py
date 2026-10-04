@@ -73,10 +73,12 @@ CEREMONIA = {
 
 FIESTA = {
     'titulo': _env('FIESTA_TITULO', 'Salón Ble'),
-    'detalle': _env('FIESTA_DETALLE', 'Av. Francisco Beiró 4526 · Villa Devoto'),
+    'detalle': _env('FIESTA_DETALLE', 'A continuación de la ceremonia'),
     'hora': _env('FIESTA_HORA', '19:30'),
-    'query': _env('FIESTA_MAPA',
-                  'Ble Eventos, Av. Francisco Beiró 4526, Villa Devoto, Buenos Aires'),
+    'query': _env('FIESTA_MAPA', 'Salón Ble, Buenos Aires'),
+    # Link de Google Maps al lugar exacto, compartido desde la app. Si está,
+    # "Ver mapa" abre esto en vez de una búsqueda por nombre.
+    'link': _env('FIESTA_LINK', 'https://maps.app.goo.gl/EhDP7AqXp35cmzWa8'),
 }
 
 # ── Contacto / RSVP ───────────────────────────────────────────────────────────
@@ -279,7 +281,7 @@ def contexto():
                           link=mapa_link(CEREMONIA['query'])),
         'fiesta': dict(FIESTA,
                        embed=mapa_embed(FIESTA['query']),
-                       link=mapa_link(FIESTA['query'])),
+                       link=FIESTA['link'] or mapa_link(FIESTA['query'])),
         'rsvp_telefono': RSVP_TELEFONO,
         'rsvp_nombre': RSVP_NOMBRE,
         'rsvp_url': f'https://wa.me/{RSVP_WHATSAPP}?text={_quote(RSVP_MENSAJE)}',
