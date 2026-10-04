@@ -1268,7 +1268,7 @@
             ['#f6d3d5', '#e5a2a8'], ['#fbe6e6', '#eebbbc'], ['#f0c4c7', '#d98d97'],
             ['#dbe6cc', '#b4caa4'], ['#fdeeed', '#f2cccd'],
         ];
-        const CANTIDAD = window.innerWidth < 640 ? 45 : 90;
+        const CANTIDAD = window.innerWidth < 640 ? 15 : 30;
 
         window.addEventListener('resize', () => {
             W = window.innerWidth; H = window.innerHeight;
@@ -1310,6 +1310,7 @@
     function moverPetalos(dt) {
         const sy = window.pageYOffset;
         const desplaza = (viento * dt) / W * 100;   // px/s → % del ancho
+        const franja = Math.max(H * 1.4, H + 240);  // alto del ciclo de caída
 
         for (const p of petalos) {
             p.y    += p.vel * dt;
@@ -1317,14 +1318,19 @@
             p.giro += p.velGiro * dt + viento * dt * 0.035 * p.arrastre;
             p.fase += p.vaiven * dt;
 
-            if (p.y > H * 1.15) {                   // reciclar desde arriba
-                p.y = -(30 + Math.random() * H * 0.3);
+            // Los pétalos viven en una franja que acompaña a la vista, así
+            // siguen cayendo en toda la página y no solo en la presentación.
+            let vistaY = p.y - sy * PARALLAX;
+            while (vistaY > H + 70) {               // salió por abajo: vuelve arriba
+                p.y -= franja; vistaY -= franja;
                 p.x = Math.random() * 100;
+            }
+            while (vistaY < H + 70 - franja) {      // quedó arriba al bajar rápido
+                p.y += franja; vistaY += franja;
             }
             if (p.x < -8)  p.x += 116;              // envolver de lado a lado
             if (p.x > 108) p.x -= 116;
 
-            const vistaY = p.y - sy * PARALLAX;
             const visible = vistaY > -70 && vistaY < H + 70;
             if (!visible) { p.el.style.opacity = '0'; continue; }
 
