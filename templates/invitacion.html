@@ -81,6 +81,18 @@
             radial-gradient(ellipse 90% 70% at 50% 50%, #ffffff 0%, transparent 70%),
             linear-gradient(165deg, var(--paper) 0%, var(--green-50) 52%, var(--rose-50) 100%);
     }
+    /* Video de fondo: ya viene con velo claro y poco contraste; además se
+       funde con el degradado de papel para que los nombres se lean encima. */
+    .hero-video {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        object-fit: cover; opacity: .6;
+    }
+    /* Un halo de papel en el centro, detrás de los nombres */
+    .hero-bg::before {
+        content: ''; position: absolute; inset: 0; z-index: 1;
+        background: radial-gradient(ellipse 45% 50% at 50% 50%, rgba(253, 252, 249, .55) 0%, transparent 100%);
+    }
+    @media (prefers-reduced-motion: reduce) { .hero-video { display: none; } }
     /* Grano sutil de papel */
     .hero-bg::after {
         content: ''; position: absolute; inset: 0; opacity: .45;
@@ -570,7 +582,13 @@
 
 <!-- ══════════════════════════ HERO ══════════════════════════ -->
 <header class="hero">
-    <div class="hero-bg"></div>
+    <div class="hero-bg">
+        <video class="hero-video" autoplay muted loop playsinline preload="auto"
+               poster="{{ url_for('static', filename='video/fondo-poster.jpg') }}" aria-hidden="true">
+            <source src="{{ url_for('static', filename='video/fondo.webm') }}" type="video/webm">
+            <source src="{{ url_for('static', filename='video/fondo.mp4') }}" type="video/mp4">
+        </video>
+    </div>
 
     <div class="hero-frame"></div>
 
