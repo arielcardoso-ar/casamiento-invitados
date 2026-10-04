@@ -229,6 +229,24 @@ Las pestañas se crean solas con sus cabeceras la primera vez.
 el contenedor se recicla. Por eso esto no es un adorno, es la única copia
 duradera de las confirmaciones y las canciones.
 
+Y funciona en las dos direcciones: **cada vez que el sitio arranca** (deploy o
+reinicio de Render) lee la planilla y vuelve a cargar en SQLite las
+confirmaciones, las canciones y las fotos que falten. Así `/admin/confirmaciones`,
+`/admin/canciones` y la galería no quedan vacías después de un reinicio. Para
+forzarlo a mano: `/admin/google?secret=...&restaurar=1`; el resultado de la
+última vez se ve en `/admin/google`.
+
+Cada fila viaja con una clave aleatoria (`confirmacion-3f9a…`) en la columna
+oculta del final. No es el ID de SQLite a propósito: ese vuelve a empezar en 1
+después de cada reinicio, y la planilla tomaba la confirmación nueva por un
+reintento de una vieja y la descartaba.
+
+> Si ya tenías el Apps Script publicado, pegá la versión nueva de
+> `scripts/apps_script_planilla.gs` y publicala como **nueva versión de la misma
+> implementación** (Implementar → Gestionar implementaciones → ✏ → Nueva
+> versión). La URL `/exec` no cambia. Sin esto el sitio sigue escribiendo bien,
+> pero no puede leer la planilla al arrancar.
+
 Hay **dos caminos y alcanza con uno**: publicar un Apps Script desde la propia
 planilla (sin Google Cloud ni OAuth, y cubre también las fotos) o usar
 Cloudinary + la API de Sheets con OAuth. Si están los dos, manda el webhook
@@ -286,7 +304,7 @@ Lo de *"cualquier usuario"* suena peor de lo que es: el script rechaza todo lo
 que no traiga el token. Es justamente lo que permite que el sitio escriba sin
 autenticarse contra Google.
 
-Cada fila viaja con una clave (`confirmacion-12`) en una última columna oculta.
+Cada fila viaja con una clave (`confirmacion-3f9a…`) en una última columna oculta.
 Si el sitio reintenta algo porque se perdió la respuesta —no el envío—, el
 script lo detecta y no duplica la fila.
 

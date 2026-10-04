@@ -98,6 +98,7 @@ def estado():
         'carpeta_drive': bool(CARPETA_DRIVE and hay_oauth()),
         'activo': configurado(),
         'en_cola': _cola.qsize() if _cola else 0,
+        'ultima_restauracion': dict(ultima_restauracion),
     }
 
 
@@ -157,9 +158,9 @@ def _asegurar_hoja(nombre):
 def _agregar_fila(hoja, valores, clave=''):
     """
     Suma una fila a la pestaña. `clave` identifica el registro de forma única
-    ("confirmacion-12") para que un reintento no duplique lo que ya entró: si
-    la respuesta del envío anterior se perdió en el camino, la fila quedó sin
-    marcar en SQLite y se reencola igual.
+    ("confirmacion-3f9a…", ver database.nueva_clave) para que un reintento no
+    duplique lo que ya entró: si la respuesta del envío anterior se perdió en
+    el camino, la fila quedó sin marcar en SQLite y se reencola igual.
     """
     fila = [('' if v is None else str(v)) for v in valores]
     if WEBHOOK_URL:
@@ -284,7 +285,12 @@ def _bajar(ruta):
         import urllib.request
         with urllib.request.urlopen(ruta, timeout=60) as r:
             return r.read()
-    local = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', ruta)
+    if ruta.startswith('uploads/') and CARPETA_SUBIDAS:
+        # En Render las subidas van a /tmp/uploads, no a static/: buscarlas en
+        # static/ hacía que ninguna foto de la fiesta llegara nunca a Drive.
+        local = os.path.join(CARPETA_SUBIDAS, ruta[len('uploads/'):])
+    else:
+        local = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', ruta)
     with open(local, 'rb') as f:
         return f.read()
 
@@ -292,12 +298,14 @@ def _bajar(ruta):
 # ── Cola en segundo plano ─────────────────────────────────────────────────────
 
 _cola = None
-_al_terminar = None    # callback(tipo, id, link) para marcar la fila en SQLite
+_al_terminar = None
+CARPETA_SUBIDAS = ''   # dónde guarda app.py las fotos sin Cloudinary    # callback(tipo, id, link) para marcar la fila en SQLite
 
 
-def iniciar(al_terminar=None):
+def iniciar(al_terminar=None, carpeta_subidas=''):
     """Arranca el hilo que vacía la cola. Se llama una vez, desde app.py."""
-    global _cola, _al_terminar
+    global _cola, _al_terminar, CARPETA_SUBIDAS
+    CARPETA_SUBIDAS = carpeta_subidas
     if _cola is not None or not configurado():
         return
     _al_terminar = al_terminar
@@ -353,21 +361,184 @@ def _despachar(tipo, datos):
 
         _agregar_fila('Fotos', (datos['cuando'], datos['subido_por'],
                                 datos['descripcion'], link, datos['ruta']),
-                      clave=f"foto-{datos['id']}")
+                      clave=datos['clave'])
         _marcar('foto', datos['id'], link or 'ok', rutas)
 
     elif tipo == 'cancion':
         _agregar_fila('Canciones', (datos['cuando'], datos['titulo'],
                                     datos['artista'], datos['sugerido_por']),
-                      clave=f"cancion-{datos['id']}")
+                      clave=datos['clave'])
         _marcar('cancion', datos['id'], '')
 
     elif tipo == 'confirmacion':
         _agregar_fila('Confirmaciones',
                       (datos['cuando'], datos['nombre'], datos['asiste'],
                        datos['restricciones'], datos['mensaje']),
-                      clave=f"confirmacion-{datos['id']}")
+                      clave=datos['clave'])
         _marcar('confirmacion', datos['id'], '')
+
+
+# ── Restauración: leer la planilla de vuelta ─────────────────────────────────
+
+def _leer_hoja(hoja):
+    """
+    Todas las filas de una pestaña, como diccionarios {cabecera: valor}.
+    La última columna, la oculta, viene como 'id': es la clave del registro.
+    """
+    if WEBHOOK_URL:
+        return _leer_hoja_por_webhook(hoja)
+    if PLANILLA and hay_oauth():
+        return _leer_hoja_por_api(hoja)
+    return []
+
+
+def _leer_hoja_por_webhook(hoja):
+    import urllib.request
+
+    # Por POST y no por GET: el token no tiene que quedar en ninguna URL.
+    cuerpo = json.dumps({'token': WEBHOOK_TOKEN, 'accion': 'leer',
+                         'hoja': hoja}).encode('utf-8')
+    pedido = urllib.request.Request(
+        WEBHOOK_URL, data=cuerpo,
+        headers={'Content-Type': 'application/json'}, method='POST')
+    with urllib.request.urlopen(pedido, timeout=60) as r:
+        respuesta = json.loads(r.read().decode('utf-8') or '{}')
+
+    if not respuesta.get('ok'):
+        # Un script viejo, publicado antes de que existiera 'leer', contesta
+        # como si fuera una fila más: lo decimos claro para /admin/google.
+        raise RuntimeError(respuesta.get('error') or
+                           'el script de la planilla no sabe leer: publicá la versión nueva')
+    if 'filas' not in respuesta:
+        raise RuntimeError('el script de la planilla no sabe leer: publicá la versión nueva')
+    return respuesta['filas']
+
+
+def _leer_hoja_por_api(hoja):
+    hojas = _servicio('sheets', 'v4').spreadsheets()
+    existentes = {h['properties']['title']
+                  for h in hojas.get(spreadsheetId=PLANILLA).execute()['sheets']}
+    if hoja not in existentes:
+        return []
+    valores = hojas.values().get(
+        spreadsheetId=PLANILLA, range=hoja,
+        valueRenderOption='FORMATTED_VALUE').execute().get('values', [])
+    if len(valores) < 2:
+        return []
+    cabeceras = valores[0]
+    return [dict(zip(cabeceras, fila + [''] * (len(cabeceras) - len(fila))))
+            for fila in valores[1:]]
+
+
+def _a_utc(texto):
+    """
+    '16/01/2027 23:40' (hora de Argentina, como la escribe el sitio) →
+    '2027-01-17 02:40:00' (UTC, como la guarda SQLite). Si no se entiende,
+    None: la fila entra igual, con la fecha de ahora.
+    """
+    from datetime import datetime, timezone, timedelta
+
+    texto = str(texto or '').strip()
+    for formato in ('%d/%m/%Y %H:%M', '%d/%m/%Y %H:%M:%S', '%d/%m/%Y',
+                    '%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%d %H:%M:%S'):
+        try:
+            momento = datetime.strptime(texto, formato)
+        except ValueError:
+            continue
+        if formato.endswith('Z'):
+            momento = momento.replace(tzinfo=timezone.utc)
+        else:
+            momento = momento.replace(tzinfo=timezone(timedelta(hours=-3)))
+        return momento.astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    return None
+
+
+def _id_de_drive(link):
+    """El ID del archivo a partir de su link (…/file/d/<ID>/view)."""
+    import re
+    encontrado = re.search(r'/d/([A-Za-z0-9_-]{10,})', link or '') or \
+        re.search(r'[?&]id=([A-Za-z0-9_-]{10,})', link or '')
+    return encontrado.group(1) if encontrado else ''
+
+
+def _registro(tipo, fila):
+    """Pasa una fila de la planilla al formato de database.restaurar()."""
+    clave = str(fila.get('id') or '').strip()
+    if not clave.startswith(tipo + '-'):
+        return None   # fila escrita a mano o sin clave: no es nuestra
+    fecha = _a_utc(fila.get('Fecha'))
+
+    if tipo == 'cancion':
+        if not str(fila.get('Tema') or '').strip():
+            return None
+        return {'clave': clave, 'fecha': fecha, 'titulo': fila['Tema'],
+                'artista': fila.get('Artista', ''),
+                'sugerido_por': fila.get('Quién la pidió', '')}
+
+    if tipo == 'confirmacion':
+        if not str(fila.get('Nombre') or '').strip():
+            return None
+        asiste = str(fila.get('¿Asiste?', 'Sí')).strip().lower() not in ('no', 'false', '0')
+        return {'clave': clave, 'fecha': fecha, 'nombre': fila['Nombre'],
+                'asiste': asiste, 'restricciones': fila.get('Restricciones', ''),
+                'mensaje': fila.get('Mensaje', '')}
+
+    if tipo == 'foto':
+        original = str(fila.get('Original') or '')
+        en_drive = str(fila.get('Link en Drive') or '')
+        if original.startswith('http'):
+            # Cloudinary: la galería la seguía sirviendo desde ahí.
+            ruta, miniatura = original, ''
+        elif _id_de_drive(en_drive):
+            # Estaba en el disco de Render y ahora vive en Drive.
+            archivo = _id_de_drive(en_drive)
+            ruta = f'https://lh3.googleusercontent.com/d/{archivo}'
+            miniatura = ruta + '=w600'
+        else:
+            return None   # no quedó copia en ningún lado que podamos mostrar
+        return {'clave': clave, 'fecha': fecha, 'ruta': ruta,
+                'thumbnail': miniatura, 'drive_link': en_drive,
+                'subido_por': fila.get('Quién la subió', ''),
+                'descripcion': fila.get('Mensaje', '')}
+    return None
+
+
+ultima_restauracion = {}
+
+
+def restaurar(guardar):
+    """
+    Trae de vuelta desde la planilla todo lo que el SQLite no tiene.
+
+    `guardar(tipo, registros)` lo inserta y devuelve cuántos eran nuevos
+    (database.restaurar). Se llama al arrancar, en un hilo aparte, y a mano
+    desde /admin/google?restaurar=1. Devuelve {tipo: cantidad o error}.
+    """
+    from datetime import datetime
+
+    resultado = {}
+    if not hay_planilla():
+        return resultado
+    for tipo, hoja in (('confirmacion', 'Confirmaciones'),
+                       ('cancion', 'Canciones'), ('foto', 'Fotos')):
+        try:
+            registros = [r for r in (_registro(tipo, f) for f in _leer_hoja(hoja)) if r]
+            resultado[tipo] = guardar(tipo, registros)
+        except Exception as e:
+            # Sin nombres ni contenidos en el log: sólo qué pestaña falló.
+            log.warning('No se pudo restaurar %s desde la planilla: %s', hoja, e)
+            resultado[tipo] = f'error: {e}'
+    ultima_restauracion.clear()
+    ultima_restauracion.update(resultado, cuando=datetime.utcnow().isoformat(timespec='seconds'))
+    log.info('Restauración desde la planilla: %s', resultado)
+    return resultado
+
+
+def restaurar_en_segundo_plano(guardar):
+    """Arranca restaurar() sin demorar el arranque del sitio."""
+    if hay_planilla():
+        threading.Thread(target=restaurar, args=(guardar,),
+                         name='restaurar-planilla', daemon=True).start()
 
 
 def _marcar(tipo, fila_id, link, rutas=None):
