@@ -91,55 +91,6 @@ van con `loading="lazy"`.
 Si borrás fotos, la invitación sigue andando con las que queden: no cuelga
 marcos vacíos.
 
----|---|
-| `base` | prefijo de los archivos, sin el `-300`/`-600` |
-| `zona` | en qué sección cuelga: `welcome`, `count`, `band`, `details`, `howto`, `rsvp`, `actions`, `closing` |
-| `lado` | `izq` o `der`: contra qué margen se apoya |
-| `y` | a qué altura de la sección arranca |
-| `giro` | la inclinación. Que ninguna quede derecha ni repita a su vecina |
-| `escala` | retoque de tamaño sobre el ancho base |
-| `foco` | `object-position`: la polaroid recorta un cuadrado, esto decide qué parte del original sobrevive. Subí el segundo número para bajar el encuadre |
-| `alt` | descripción para lectores de pantalla |
-
-Para agregar una sección con foto alcanza con poner `{{ capa('zona') }}` como
-primer hijo de la sección y sumarle la clase `tiene-fondo`.
-
-Para cambiar las fotos:
-
-```bash
-cd scripts && ../.venv/bin/python preparar_fotos.py ~/Downloads/una.jpg ~/Downloads/otra.jpg
-```
-
-El orden de los argumentos es el que numera los archivos (`foto-1`, `foto-2`…).
-Genera dos anchos por foto (300 y 600 px), encajados en un cuadrado: la polaroid
-recorta un cuadrado, así que de una foto vertical bajar 600 px de ancho sería
-traer el triple de píxeles de los que se ven. Las ocho juntas pesan menos de
-500 KB, y un celular baja sólo la mitad.
-
-Si borrás las fotos, la invitación sigue andando sin ellas: no cuelga marcos
-vacíos.
-
----|---|
-| `base` | prefijo de los archivos, sin el `-500`/`-900` |
-| `foco` | `object-position`: la polaroid es cuadrada y la foto apaisada, así que hay que decir qué parte del original se conserva. Bajá el segundo número para mostrar más de arriba de la cabeza |
-| `giro` | la inclinación con la que cuelga. Que ninguna quede derecha ni igual a otra |
-| `pie` | el texto manuscrito del borde de abajo (podés dejarlo vacío) |
-| `alt` | descripción para lectores de pantalla |
-
-Van colgadas en la bienvenida y en el cierre. Si sumás una tercera foto,
-aparece sola en el bloque de confirmación — el hueco ya está puesto en el
-template.
-
-Para cambiarlas:
-
-```bash
-cd scripts && ../.venv/bin/python preparar_fotos.py ~/Downloads/una.jpg ~/Downloads/otra.jpg
-```
-
-Eso genera dos anchos por foto (500 y 900 px) para que cada teléfono baje sólo
-lo que necesita. Si borrás las fotos, la invitación sigue andando sin ellas: no
-cuelga marcos vacíos.
-
 ---
 
 ## Correr en local
@@ -183,7 +134,7 @@ tocar el código.
 | `MP_LINK` | Link de cobro de Mercado Pago. **Si lo cargás, el sitio genera solo el QR de pago.** | vacío |
 | `MP_QR_IMG` | QR oficial bajado de la app de MP. Archivo dentro de `static/` o URL. Tiene prioridad sobre `MP_LINK`. | vacío |
 | `RSVP_WHATSAPP` | Teléfono de confirmación, sólo dígitos con país. | `541159632661` |
-| `CEREMONIA_*` / `FIESTA_*` | Título, detalle y búsqueda de mapa de cada lugar. | ver `config.py` |
+| `CEREMONIA_*` / `FIESTA_*` | Título, detalle y búsqueda de mapa de cada lugar. `FIESTA_LINK` es el link de Maps al salón y `FIESTA_EMBED` el src de su mapa embebido. | ver `config.py` |
 
 ---
 

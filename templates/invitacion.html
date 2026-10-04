@@ -411,6 +411,7 @@
         border: 0; filter: saturate(.85) contrast(.96);
     }
     .map-note { text-align: center; margin-top: 1.4rem; font-style: italic; color: var(--muted); }
+    .map-siguiente { margin-top: 3rem; }
 
     /* ══ RSVP ═══════════════════════════════════════════════════════════════ */
     .rsvp { background: var(--white); text-align: center; }
@@ -871,6 +872,14 @@
                 loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
     <p class="map-note reveal d2">{{ ceremonia.detalle }}</p>
+    {% if fiesta.embed %}
+    <p class="section-sub map-siguiente reveal">Y después, a la fiesta</p>
+    <div class="map-wrap reveal d1">
+        <iframe src="{{ fiesta.embed }}" title="Mapa de {{ fiesta.titulo }}"
+                loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <p class="map-note reveal d2">{{ fiesta.titulo }}{% if fiesta.hora %} · {{ fiesta.hora }} h{% endif %}</p>
+    {% endif %}
 </section>
 
 <!-- ══════════════════════════ RSVP ══════════════════════════ -->

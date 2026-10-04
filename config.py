@@ -74,8 +74,20 @@ CEREMONIA = {
 FIESTA = {
     'titulo': _env('FIESTA_TITULO', 'Salón Ble'),
     'detalle': _env('FIESTA_DETALLE', 'A continuación de la ceremonia'),
-    'hora': _env('FIESTA_HORA', ''),
+    'hora': _env('FIESTA_HORA', '19:30'),
     'query': _env('FIESTA_MAPA', 'Salón Ble, Buenos Aires'),
+    # Link de Google Maps al lugar exacto, compartido desde la app. Si está,
+    # "Ver mapa" abre esto en vez de una búsqueda por nombre.
+    'link': _env('FIESTA_LINK', 'https://maps.app.goo.gl/EhDP7AqXp35cmzWa8'),
+    # El mapa embebido del salón: en Maps, Compartir → Insertar un mapa, y de
+    # ese <iframe> sólo el src. Si está vacío, "Cómo llegar" muestra sólo la iglesia.
+    'embed': _env(
+        'FIESTA_EMBED',
+        'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3283.859839361745'
+        '!2d-58.51705262425963!3d-34.60770557295283!2m3!1f0!2f0!3f0!3m2!1i1024'
+        '!2i768!4f13.1!3m3!1m2!1s0x95bcb7d185e919ab%3A0x804218ff5dd74729!2sBle'
+        '!5e0!3m2!1ses-419!2sar!4v1791133138883!5m2!1ses-419!2sar',
+    ),
 }
 
 # ── Contacto / RSVP ───────────────────────────────────────────────────────────
@@ -277,8 +289,7 @@ def contexto():
                           embed=mapa_embed(CEREMONIA['query']),
                           link=mapa_link(CEREMONIA['query'])),
         'fiesta': dict(FIESTA,
-                       embed=mapa_embed(FIESTA['query']),
-                       link=mapa_link(FIESTA['query'])),
+                       link=FIESTA['link'] or mapa_link(FIESTA['query'])),
         'rsvp_telefono': RSVP_TELEFONO,
         'rsvp_nombre': RSVP_NOMBRE,
         'rsvp_url': f'https://wa.me/{RSVP_WHATSAPP}?text={_quote(RSVP_MENSAJE)}',

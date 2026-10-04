@@ -2,11 +2,11 @@
 """
 Sitio público del casamiento de Katherine & Ariel.
 
-Tres cosas para los invitados:
-  1. La invitación               →  /
+Para los invitados:
+  1. La invitación               →  /   (con confirmación y canciones, abiertas ya)
   2. La galería compartida       →  /galeria   (se habilita recién el día del evento)
   3. Subir fotos durante la fiesta →  /fotos    (idem)
-  + el regalo por Mercado Pago   →  /regalo
+  4. El regalo por Mercado Pago  →  /regalo
 
 Las fotos se persisten en Cloudinary; SQLite funciona como índice local.
 """
