@@ -65,6 +65,7 @@
     </a>
     <a href="/regalo" class="nav-link {% if request.path == '/regalo' %}active{% endif %}">
         <span class="nav-icon" aria-hidden="true">🎁</span> Regalo
+        {% if not regalo_abierto %}<span class="nav-lock" aria-label="se habilita el día del evento">🔒</span>{% endif %}
     </a>
 </nav>
 

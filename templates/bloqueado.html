@@ -67,8 +67,10 @@
     </div>
 
     <p class="locked-hint">
+        {% if pista %}{{ pista }}{% else %}
         Tip: guardá la página en la pantalla de inicio de tu celular. El día del
         casamiento se habilita sola y vas a poder subir tus fotos en dos toques.
+        {% endif %}
     </p>
 </div>
 {% endblock %}
