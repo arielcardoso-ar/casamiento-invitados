@@ -37,6 +37,7 @@ import json
 import logging
 import os
 import queue
+import re
 import threading
 
 log = logging.getLogger(__name__)
@@ -158,6 +159,25 @@ def _asegurar_hoja(nombre):
     _hojas_listas.add(nombre)
 
 
+def _como_texto(valor):
+    """
+    El valor tal cual, pero que la planilla nunca lo tome como fórmula.
+
+    Lo que escriben los invitados (nombre, canción, mensaje) llega a la hoja
+    con appendRow o USER_ENTERED, y ahí "=IMAGE(...)" o "=IMPORTXML(...)" se
+    ejecutan al abrirla y pueden mandar a otro sitio los datos de las demás
+    filas. Un apóstrofo adelante lo deja como texto y la hoja no lo muestra.
+    """
+    texto = '' if valor is None else str(valor)
+    if texto[:1] in ('=', '+', '-', '@', '\t', '\r') and not _NUMERO.fullmatch(texto):
+        return "'" + texto
+    return texto
+
+
+# Números y teléfonos ("-3", "+54 11 5963-2661") no son fórmulas: van como vienen.
+_NUMERO = re.compile(r'[+-]?[\d\s().,/-]+')
+
+
 def _agregar_fila(hoja, valores, clave=''):
     """
     Suma una fila a la pestaña. `clave` identifica el registro de forma única
@@ -165,7 +185,7 @@ def _agregar_fila(hoja, valores, clave=''):
     duplique lo que ya entró: si la respuesta del envío anterior se perdió en
     el camino, la fila quedó sin marcar en SQLite y se reencola igual.
     """
-    fila = [('' if v is None else str(v)) for v in valores]
+    fila = [_como_texto(v) for v in valores]
     if WEBHOOK_URL:
         _agregar_fila_por_webhook(hoja, fila, clave)
     elif PLANILLA:
