@@ -45,6 +45,12 @@ app = Flask(__name__)
 # previsualizar la galería antes del evento. No hay datos sensibles en sesión.
 app.secret_key = os.environ.get('SECRET_KEY') or os.urandom(32)
 
+# La cookie de sesión sólo viaja por https en Render, no la lee JavaScript y no
+# se manda desde otros sitios.
+app.config['SESSION_COOKIE_SECURE'] = bool(os.environ.get('RENDER'))
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
 MAX_FOTO_BYTES = 25 * 1024 * 1024          # 25 MB por foto
 app.config['MAX_CONTENT_LENGTH'] = 30 * 1024 * 1024   # margen sobre el archivo
 app.config['UPLOAD_FOLDER'] = '/tmp/uploads' if os.environ.get('RENDER') else 'static/uploads'
@@ -198,6 +204,11 @@ def fotos_habilitadas():
     return config.fotos_abiertas() or desbloqueado()
 
 
+def regalo_habilitado():
+    """La página del regalo está abierta para este visitante."""
+    return config.regalo_abierto() or desbloqueado()
+
+
 def requiere_apertura(f):
     """Bloquea un endpoint de API hasta que se habiliten las fotos."""
     @wraps(f)
@@ -231,6 +242,28 @@ def aplicar_pase_de_vista_previa():
     return redirect(url_for(request.endpoint, **limpio) if request.endpoint else '/')
 
 
+def es_admin():
+    """¿Este visitante entró a /admin con el secreto en esta sesión?"""
+    return bool(ADMIN_SECRET) and bool(session.get('admin'))
+
+
+@app.before_request
+def aplicar_secreto_admin():
+    """
+    `/admin/...?secret=<ADMIN_SECRET>` deja la sesión abierta y redirige a la
+    misma URL sin el secreto. Así no queda en el historial del navegador, en
+    los logs de Render ni en una captura de pantalla de la barra.
+    """
+    if request.method != 'GET' or not request.path.startswith('/admin/'):
+        return None
+    secreto = request.args.get('secret')
+    if secreto is None or not es_secreto_admin(secreto):
+        return None
+    session['admin'] = True
+    limpio = {k: v for k, v in request.args.items(multi=True) if k != 'secret'}
+    return redirect(url_for(request.endpoint, **limpio) if request.endpoint else '/')
+
+
 def _fuente_qr_mp():
     """
     De dónde sale la imagen del QR de pago. Preferimos el QR oficial que baja
@@ -250,6 +283,7 @@ def _fuente_qr_mp():
 def inyectar_contexto():
     ctx = config.contexto()
     ctx['fotos_abiertas'] = fotos_habilitadas()
+    ctx['regalo_abierto'] = regalo_habilitado()
     ctx['segundos_para_apertura'] = config.segundos_para_apertura()
     ctx['vista_previa'] = desbloqueado()
     ctx['mp_qr_src'] = _fuente_qr_mp()
@@ -289,6 +323,16 @@ def galeria():
 
 @app.route('/regalo')
 def regalo():
+    if not regalo_habilitado():
+        return render_template('bloqueado.html',
+                               pestania='Regalo',
+                               titulo='El regalo se habilita el día del casamiento',
+                               copy='Por ahora lo único que nos importa es que '
+                                    'vengas. Ese día vas a encontrar acá el alias.',
+                               apertura_iso=config.APERTURA_REGALO.isoformat(),
+                               pista='Tip: guardá la página en la pantalla de inicio '
+                                     'de tu celular. El día del casamiento se '
+                                     'habilita sola.'), 200
     return render_template('regalo.html')
 
 
@@ -405,7 +449,7 @@ def qr_code():
     pedido = request.args.get('to', '')
 
     if pedido == 'pago':
-        if not config.MP_LINK:
+        if not config.MP_LINK or not regalo_habilitado():
             return jsonify({'error': 'MP_LINK no configurado'}), 404
         url = config.MP_LINK
     else:
@@ -692,7 +736,7 @@ def api_confirmar():
 @app.route('/admin/confirmaciones')
 def admin_confirmaciones():
     """La lista de confirmaciones. Protegida con ?secret=<ADMIN_SECRET>."""
-    if not es_secreto_admin(request.args.get('secret')):
+    if not es_admin():
         return jsonify({'error': 'Forbidden'}), 403
 
     confirmaciones = db.get_confirmaciones()
@@ -715,7 +759,7 @@ def admin_google():
     `?reintentar=1` vuelve a encolar todo lo que todavía no llegó.
     `?restaurar=1` vuelve a traer desde la planilla lo que falte acá.
     """
-    if not es_secreto_admin(request.args.get('secret')):
+    if not es_admin():
         return jsonify({'error': 'Forbidden'}), 403
 
     pendientes = db.pendientes_de_replica()
@@ -760,7 +804,7 @@ def admin_google():
 @app.route('/admin/canciones')
 def admin_canciones():
     """La lista para armar la playlist. Protegida con ?secret=<ADMIN_SECRET>."""
-    if not es_secreto_admin(request.args.get('secret')):
+    if not es_admin():
         return jsonify({'error': 'Forbidden'}), 403
 
     # Agrupadas por tema: si tres personas piden la misma, se ve de una.
@@ -886,7 +930,7 @@ def _recuperar_indice_si_hace_falta():
 @app.route('/admin/sync-from-cloudinary')
 def sync_from_cloudinary():
     """Reconstrucción manual del índice. Protegida con ?secret=<ADMIN_SECRET>."""
-    if not es_secreto_admin(request.args.get('secret')):
+    if not es_admin():
         return jsonify({'error': 'Forbidden'}), 403
     if not CLOUDINARY_ENABLED:
         return jsonify({'error': 'Cloudinary no configurado'}), 400
