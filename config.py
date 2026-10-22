@@ -272,6 +272,41 @@ def mapa_link(query):
     return f'https://maps.google.com/maps?q={quote_plus(query)}'
 
 
+def como_llegar(query, link=''):
+    """
+    Links para salir manejando con un toque, en la app que use cada uno.
+
+    Google Maps usa el link exacto del lugar si lo hay; si no, arma la ruta
+    hasta la búsqueda. Waze sólo entiende búsquedas, así que va con el nombre.
+    """
+    from urllib.parse import quote_plus
+    return {
+        'google': link or f'https://www.google.com/maps/dir/?api=1&destination={quote_plus(query)}',
+        'waze': f'https://waze.com/ul?q={quote_plus(query)}&navigate=yes',
+    }
+
+
+def google_calendar_url():
+    """
+    El mismo evento que `/casamiento.ics`, pero como link de Google Calendar.
+
+    En Android el .ics se baja como archivo y hay que ir a buscarlo; este link
+    abre el evento ya cargado, listo para tocar "Guardar".
+    """
+    from urllib.parse import urlencode
+    fmt = '%Y%m%dT%H%M%SZ'
+    inicio = FECHA_EVENTO.astimezone(timezone.utc)
+    fin = inicio + timedelta(hours=DURACION_HORAS)
+    return 'https://calendar.google.com/calendar/render?' + urlencode({
+        'action': 'TEMPLATE',
+        'text': f'Casamiento de {NOVIA} y {NOVIO}',
+        'dates': f'{inicio.strftime(fmt)}/{fin.strftime(fmt)}',
+        'location': f'{CEREMONIA["titulo"]} · {CEREMONIA["detalle"]}',
+        'details': f'Ceremonia {HORA_CEREMONIA} h en {CEREMONIA["titulo"]}. '
+                   f'Fiesta {FIESTA["hora"]} h en {FIESTA["titulo"]}.',
+    }, safe='/')
+
+
 def contexto():
     """Diccionario que se inyecta en todos los templates."""
     return {
@@ -290,6 +325,9 @@ def contexto():
                           link=mapa_link(CEREMONIA['query'])),
         'fiesta': dict(FIESTA,
                        link=FIESTA['link'] or mapa_link(FIESTA['query'])),
+        'ceremonia_ruta': como_llegar(CEREMONIA['query']),
+        'fiesta_ruta': como_llegar(FIESTA['query'], FIESTA['link']),
+        'gcal_url': google_calendar_url(),
         'rsvp_telefono': RSVP_TELEFONO,
         'rsvp_nombre': RSVP_NOMBRE,
         'rsvp_url': f'https://wa.me/{RSVP_WHATSAPP}?text={_quote(RSVP_MENSAJE)}',

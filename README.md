@@ -91,15 +91,52 @@ van con `loading="lazy"`.
 Si borrás fotos, la invitación sigue andando con las que queden: no cuelga
 marcos vacíos.
 
+### El sobre y el link con nombre
+
+La invitación llega cerrada en un sobre con un lacre `K&A`; un toque lo abre
+y aparece la portada. Sale una sola vez por visita, y nunca si el link lleva un
+`#` (`/#rsvp` va directo al formulario) o `?sobre=0`.
+
+Si al mandarla por WhatsApp le agregás `?para=` con el nombre, el sobre dice
+*Para …*:
+
+```
+https://<tu-sitio>/?para=Familia%20Pérez
+https://<tu-sitio>/?para=Tía%20Marta
+```
+
+(`%20` es el espacio; WhatsApp suele aceptarlo escrito con espacio también,
+pero con `%20` el link no se corta.) Sin `?para=` dice *Para vos*.
+
+### Lo que ayuda al invitado a no olvidarse
+
+- **Botón flotante "Confirmar asistencia"**: aparece al bajar de la portada y
+  se esconde mientras se ve el formulario. Una vez que alguien confirmó desde
+  ese celular, no vuelve a aparecer.
+- **Agendar**: Google Calendar (abre el evento ya cargado, ideal en Android)
+  y el `.ics` de siempre para iPhone y Outlook. Se ofrece en la cuenta
+  regresiva y otra vez apenas el invitado confirma.
+- **Cómo llegar**: debajo de cada mapa, Google Maps y Waze con un toque.
+  Waze busca por nombre (`FIESTA_MAPA` / `CEREMONIA_MAPA`); si alguna vez
+  marca otro lugar, afiná ese texto.
+
 ---
 
 ## Correr en local
 
 ```bash
-pip install -r requirements.txt && python app.py
+git fetch origin && git checkout claude/project-thread-91ojww   # o la rama que quieras probar
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+FLASK_DEBUG=1 .venv/bin/python app.py
 ```
 
-Abrí <http://localhost:5001>.
+Abrí <http://localhost:5001>. Con `FLASK_DEBUG=1` los cambios en los
+templates se ven al recargar, sin reiniciar. Para verla como en el celular:
+en Chrome, F12 → el ícono del celular (o abrí `http://<ip-de-tu-compu>:5001`
+desde el teléfono, en la misma red Wi-Fi).
+
+Para probar el sobre de nuevo: abrí `http://localhost:5001/?sobre=1`
+(sólo aparece una vez por pestaña). Con `?para=Tía%20Marta` se ve con nombre.
 
 Sin Cloudinary configurado las fotos se guardan en `static/uploads/` — alcanza
 perfecto para probar.
