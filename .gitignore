@@ -24,3 +24,4 @@ static/uploads/
 
 # Config local de Claude Code.
 .claude/
+scripts/deco/raw/

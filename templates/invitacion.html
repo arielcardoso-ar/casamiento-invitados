@@ -368,10 +368,25 @@
     .timer .sep { font-size: 2rem; color: var(--rose-400); align-self: flex-start; margin-top: .3rem; }
     @media (max-width: 560px) { .timer .sep { display: none; } }
 
+    /* ══ Papel ══════════════════════════════════════════════════════════════ */
+    /* Grano de papel de algodón sobre las secciones claras. Es una baldosa
+       gris casi blanca que se multiplica con el color de cada sección, así
+       que no cambia la paleta: sólo le saca el brillo de pantalla. */
+    .welcome, .band, .details, .rsvp, .cancion, .actions, .closing { isolation: isolate; }
+    .welcome::before, .band::before, .details::before, .rsvp::before,
+    .cancion::before, .actions::before, .closing::before {
+        content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+        background: url('{{ url_for('static', filename='img/deco/papel.jpg') }}') 0 0 / 384px;
+        mix-blend-mode: multiply; opacity: .7;
+    }
+
     /* ══ Cita ═══════════════════════════════════════════════════════════════ */
     .band {
         text-align: center;
-        background: linear-gradient(170deg, var(--rose-50) 0%, var(--rose-100) 100%);
+        /* Una pincelada de acuarela detrás de la frase, como en la tarjeta impresa. */
+        background:
+            url('{{ url_for('static', filename='img/deco/banda.webp') }}') center / clamp(480px, 135vw, 900px) auto no-repeat,
+            linear-gradient(170deg, var(--rose-50) 0%, var(--rose-100) 100%);
     }
     .band .quote {
         max-width: 22ch; margin: 0 auto; font-style: italic; font-weight: 300;
@@ -508,6 +523,21 @@
         text-align: center;
         background: linear-gradient(180deg, var(--rose-50) 0%, var(--white) 100%);
     }
+    .cancion { overflow: hidden; }
+    .cancion > *:not(.deco-ramo) { position: relative; z-index: 1; }
+    .deco-ramo {
+        position: absolute; z-index: 0; pointer-events: none; user-select: none;
+        width: clamp(130px, 30vw, 270px); height: auto; opacity: .92;
+    }
+    .deco-ramo.izq { top: -14px; left: -22px; }
+    .deco-ramo.der { bottom: -18px; right: -22px; transform: rotate(180deg); }
+    /* En el celular el formulario ocupa casi todo el ancho: los ramos se
+       achican y se corren al borde para no tapar los campos. */
+    @media (max-width: 560px) {
+        .deco-ramo { width: 150px; opacity: .85; }
+        .deco-ramo.izq { top: -10px; left: -40px; }
+        .deco-ramo.der { bottom: -14px; right: -40px; }
+    }
     .cancion-form { max-width: 420px; margin: 0 auto; display: grid; gap: .65rem; }
     .cancion-form .btn,
     .rsvp-form .btn {
@@ -559,6 +589,10 @@
 
     /* ══ Cierre ═════════════════════════════════════════════════════════════ */
     .closing { background: var(--white); text-align: center; padding-bottom: calc(6rem + env(safe-area-inset-bottom)); }
+    .closing .ramita {
+        display: block; width: 46px; height: auto; margin: 0 auto 1.2rem;
+        transform: rotate(-18deg); pointer-events: none;
+    }
     .closing .sign {
         font-family: var(--font-script); font-size: clamp(2.8rem, 11vw, 4.4rem);
         color: var(--green-700); line-height: 1.15;
@@ -605,7 +639,9 @@
         filter: drop-shadow(0 22px 34px rgba(59, 76, 51, .2)) drop-shadow(0 3px 6px rgba(59, 76, 51, .12));
     }
     .sobre-dorso, .sobre-frente, .sobre-solapa { position: absolute; border-radius: 6px; }
-    .sobre-dorso { inset: 0; background: linear-gradient(180deg, #d8e3cc, #e4ecda); }
+    /* El papel del sobre es lino salvia: la trama se multiplica sobre el color. */
+    .sobre-dorso, .sobre-frente, .sobre-solapa { background-blend-mode: multiply; }
+    .sobre-dorso { inset: 0; background: url('{{ url_for('static', filename='img/deco/lino.jpg') }}') 0 0 / 256px, linear-gradient(180deg, #d8e3cc, #e4ecda); }
     /* La tarjeta adentro: asoma cuando sube la solapa. */
     .sobre-carta {
         position: absolute; left: 6%; right: 6%; top: 7%; bottom: 7%; z-index: 1;
@@ -631,12 +667,13 @@
         background:
             linear-gradient(to top right, transparent calc(50% - .6px), rgba(122, 150, 102, .22) 50%, transparent calc(50% + .6px)) left bottom / 50% 62% no-repeat,
             linear-gradient(to top left, transparent calc(50% - .6px), rgba(122, 150, 102, .22) 50%, transparent calc(50% + .6px)) right bottom / 50% 62% no-repeat,
+            url('{{ url_for('static', filename='img/deco/lino.jpg') }}') 0 0 / 256px,
             linear-gradient(180deg, #e9f0e1 0%, #f1f5eb 100%);
     }
     .sobre-solapa {
         inset: 0 0 auto 0; height: 58%; z-index: 3;
         clip-path: polygon(0 0, 100% 0, 50% 100%);
-        background: linear-gradient(180deg, #d3dfc6 0%, #dfe8d4 100%);
+        background: url('{{ url_for('static', filename='img/deco/lino.jpg') }}') 0 0 / 256px, linear-gradient(180deg, #d3dfc6 0%, #dfe8d4 100%);
         transform-origin: 50% 0;
         /* Al pasar la mitad del giro se va detrás de la carta. */
         transition: transform .8s cubic-bezier(.45, .05, .3, 1), z-index 0s linear .4s;
@@ -651,23 +688,18 @@
     /* El lacre: es el botón. */
     .sobre-sello {
         position: absolute; z-index: 5; left: 50%; top: 58%;
-        width: clamp(58px, 16vw, 78px); aspect-ratio: 1; translate: -50% -50%;
+        width: clamp(70px, 19vw, 94px); aspect-ratio: 1; translate: -50% -50%;
         display: grid; place-items: center; cursor: pointer;
         border: 0; border-radius: 50%; padding: 0;
-        background: radial-gradient(circle at 36% 30%, #eab3b6 0%, #d48890 42%, #b8626c 100%);
-        box-shadow:
-            inset 0 0 0 4px rgba(255, 255, 255, .14), inset 0 -3px 6px rgba(107, 40, 50, .25),
-            0 3px 8px rgba(107, 40, 50, .3);
-        color: #fff6f4; font-family: var(--font-script); font-size: clamp(1.15rem, 4.6vw, 1.5rem);
+        /* Cera rosa con una corona de laurel en relieve; las iniciales van
+           en el centro liso, hundidas como si las hubiera marcado el sello. */
+        background: url('{{ url_for('static', filename='img/deco/lacre.webp') }}') center / contain no-repeat;
+        filter: drop-shadow(0 3px 5px rgba(107, 40, 50, .28));
+        color: #b0646d; font-family: var(--font-script); font-size: clamp(1.1rem, 4.6vw, 1.45rem);
         line-height: 1; letter-spacing: -.02em;
-        text-shadow: 0 1px 1px rgba(107, 40, 50, .35);
+        text-shadow: 0 1px 0 rgba(255, 236, 234, .7), 0 -1px 0 rgba(122, 52, 62, .35);
         animation: latir 2.4s ease-in-out infinite;
         transition: transform .35s ease, opacity .35s ease;
-    }
-    /* El borde del lacre, apenas marcado, como el de un sello de metal. */
-    .sobre-sello::before {
-        content: ''; position: absolute; inset: 12%; border-radius: 50%;
-        border: 1px solid rgba(255, 246, 244, .35);
     }
     .sobre-sello small { font-size: .62em; margin: 0 .04em; opacity: .85; }
     .sobre-sello:focus-visible { outline: 2px solid var(--green-600); outline-offset: 5px; }
@@ -1193,6 +1225,8 @@
 
 <!-- ══════════════════════════ CANCIÓN ══════════════════════════ -->
 <section class="cancion" id="cancion">
+    <img class="deco-ramo izq" src="{{ url_for('static', filename='img/deco/ramo.webp') }}" alt="" aria-hidden="true" loading="lazy" decoding="async" width="560" height="649">
+    <img class="deco-ramo der" src="{{ url_for('static', filename='img/deco/ramo-2.webp') }}" alt="" aria-hidden="true" loading="lazy" decoding="async" width="560" height="504">
     <h2 class="kicker-script reveal">Sumá una canción</h2>
     <p class="section-sub reveal">Para que la pista no pare</p>
     <p class="cancion-nota reveal d1">Decinos cuál es el tema que no puede faltar y lo agregamos a la playlist de la fiesta.</p>
@@ -1241,6 +1275,7 @@
 <!-- ══════════════════════════ CIERRE ══════════════════════════ -->
 <section class="tiene-fondo closing">
     {{ capa('closing') }}
+    <img class="ramita reveal" src="{{ url_for('static', filename='img/deco/ramita.webp') }}" alt="" aria-hidden="true" loading="lazy" decoding="async" width="182" height="387">
     <p class="sign reveal">Te esperamos</p>
     <p class="names reveal d1">{{ novia_corto }} &amp; {{ novio_corto }} · {{ fecha_larga }}</p>
 </section>
