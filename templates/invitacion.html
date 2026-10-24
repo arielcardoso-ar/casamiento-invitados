@@ -344,6 +344,10 @@
         max-width: 34ch; margin: 0 auto; font-size: clamp(1.2rem, 4.4vw, 1.5rem);
         color: var(--ink-soft); line-height: 1.75; font-weight: 300;
     }
+    /* Una paloma para la invitación personal, dos para la que es con pareja. */
+    .palomas { display: block; height: auto; margin: 0 auto .6rem; pointer-events: none; }
+    .welcome .palomas { width: clamp(130px, 34vw, 180px); }
+    .rsvp-listo .palomas { width: 120px; margin-bottom: .2rem; }
     .welcome .saludo {
         font-family: var(--font-script2); font-size: clamp(2rem, 7vw, 2.6rem);
         color: var(--rose-500); line-height: 1.2; margin-bottom: .8rem; max-width: none;
@@ -700,6 +704,15 @@
         /* Al pasar la mitad del giro se va detrás de la carta. */
         transition: transform .8s cubic-bezier(.45, .05, .3, 1), z-index 0s linear .4s;
     }
+    /* La estampilla: sólo en los sobres con destinatario. */
+    .sobre-estampilla {
+        position: absolute; z-index: 4; top: 8%; right: 5%; width: 15%; height: auto;
+        rotate: 5deg; display: none; pointer-events: none;
+        filter: drop-shadow(0 1px 2px rgba(59, 76, 51, .22));
+        transition: opacity .35s;
+    }
+    .con-nombre .sobre-estampilla { display: block; }
+    .sobre-abriendo .sobre-estampilla { opacity: 0; }
     .sobre-para {
         position: absolute; z-index: 4; left: 8%; right: 8%; bottom: 7%;
         font-family: var(--font-script); font-size: clamp(1.35rem, 5.6vw, 1.85rem);
@@ -841,7 +854,7 @@
     desde JavaScript con textContent, nunca como HTML. -#}
 <div class="sobre" id="sobre" role="dialog" aria-modal="true" aria-label="Invitación cerrada">
     <p class="sobre-kicker">Tenés una invitación</p>
-    <div class="sobre-env">
+    <div class="sobre-env{% if invitado %} con-nombre{% endif %}" id="sobreEnv">
         <div class="sobre-dorso"></div>
         <div class="sobre-carta" aria-hidden="true">
             <span class="nombres">{{ novia_corto }} &amp; {{ novio_corto }}</span>
@@ -849,6 +862,7 @@
         </div>
         <div class="sobre-frente"></div>
         <div class="sobre-solapa"></div>
+        <img class="sobre-estampilla" src="{{ url_for('static', filename='img/deco/estampilla.webp') }}" alt="" aria-hidden="true" width="200" height="206">
         <p class="sobre-para" id="sobrePara"{% if invitado %} data-fijo{% endif %}>Para {{ destinatario if invitado else 'vos' }}</p>
         <button type="button" class="sobre-sello" id="sobreAbrir"
                 aria-label="Abrir la invitación"><span>{{ novia_corto[:1] }}<small>&amp;</small>{{ novio_corto[:1] }}</span></button>
@@ -1082,6 +1096,7 @@
 <!-- ══════════════════════════ BIENVENIDA ══════════════════════════ -->
 <section class="tiene-fondo welcome">
     {{ capa('welcome') }}
+    {% if invitado %}<img class="palomas reveal" src="{{ url_for('static', filename='img/deco/' ~ ('palomas.webp' if dos else 'paloma.webp')) }}" alt="" aria-hidden="true" loading="lazy" decoding="async" width="400" height="{{ 168 if dos else 282 }}">{% endif %}
     {% if invitado %}<p class="saludo reveal">{{ invitado.nombre }}{% if dos and invitado.pareja %} y {{ invitado.pareja }}{% endif %}:</p>{% endif %}
     <p class="reveal">Después de tanto camino recorrido juntos, llegó el día de decirnos que sí.
         {% if dos %}Nos encantaría que estén los dos ahí para verlo.{% else %}Nos encantaría que estés ahí para verlo.{% endif %}</p>
@@ -1261,6 +1276,7 @@
 
         {#- Recién confirmado es el mejor momento para que lo agende. -#}
         <div class="rsvp-listo" id="rsvpListo" hidden>
+            <img class="palomas" src="{{ url_for('static', filename='img/deco/' ~ ('palomas.webp' if dos else 'paloma.webp')) }}" alt="" aria-hidden="true" loading="lazy" decoding="async" width="400" height="{{ 168 if dos else 282 }}">
             <p>¿Lo agendás así no se te pasa?</p>
             <div class="agendar">
                 <a class="btn-sutil" href="{{ gcal_url }}" target="_blank" rel="noopener">📅 Google Calendar</a>
@@ -1352,6 +1368,8 @@
             const destino = document.getElementById('sobrePara');
             // Un link personal firmado manda sobre el ?para= suelto.
             if (para && !destino.hasAttribute('data-fijo')) destino.textContent = 'Para ' + para;
+            // Un sobre con nombre lleva estampilla, como uno que llegó por correo.
+            if (para) document.getElementById('sobreEnv').classList.add('con-nombre');
         } catch {}
 
         const video = document.querySelector('.hero-video');

@@ -61,6 +61,21 @@ def textura(rgb, contraste, lado):
     return img
 
 
+def desde_el_borde(objeto):
+    """Fondo = lo que no es objeto y se alcanza desde la esquina; los huecos de adentro quedan."""
+    from collections import deque
+    fuera = np.zeros_like(objeto)
+    q = deque([(0, 0)]); fuera[0, 0] = True
+    H, W = objeto.shape
+    while q:
+        y, x = q.popleft()
+        for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            ny, nx = y + dy, x + dx
+            if 0 <= ny < H and 0 <= nx < W and not fuera[ny, nx] and not objeto[ny, nx]:
+                fuera[ny, nx] = True; q.append((ny, nx))
+    return fuera
+
+
 # Papel: grano de algodón para las secciones blancas.
 guardar(textura(abrir('papel-11.png'), 1.3, 512), 'papel.jpg', quality=82)
 # Lino salvia del sobre, también como grano neutro.
@@ -71,17 +86,7 @@ rgb = abrir('lacre-5.png')
 sat = rgb.max(axis=2) - rgb.min(axis=2)
 mask = a_imagen((sat > 0.07).astype(np.float32)).filter(ImageFilter.MedianFilter(5))
 # Rellena huecos (brillos blancos dentro de la cera).
-m = np.asarray(mask) > 127
-from collections import deque
-fuera = np.zeros_like(m)
-q = deque([(0, 0)]); fuera[0, 0] = True
-H, W = m.shape
-while q:
-    y, x = q.popleft()
-    for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-        ny, nx = y + dy, x + dx
-        if 0 <= ny < H and 0 <= nx < W and not fuera[ny, nx] and not m[ny, nx]:
-            fuera[ny, nx] = True; q.append((ny, nx))
+fuera = desde_el_borde(np.asarray(mask) > 127)
 alfa = a_imagen((~fuera).astype(np.float32)).filter(ImageFilter.GaussianBlur(1.2))
 lacre = Image.open(RAW / 'lacre-5.png').convert('RGB')
 lacre.putalpha(alfa)
@@ -94,7 +99,8 @@ guardar(cuad, 'lacre.webp', 240, quality=86, method=6)
 for origen, destino, ancho, calidad in (('ramo-29.png', 'ramo.webp', 560, 72), ('ramo-3.png', 'ramo-2.webp', 560, 72),
                                         ('ramita-7.png', 'ramita.webp', 300, 78), ('banda-41.png', 'banda.webp', 960, 66),
                                         ('guirnalda-12.png', 'guirnalda.webp', 640, 76), ('guirnalda-44.png', 'guirnalda-2.webp', 480, 76),
-                                        ('corona-9.png', 'corona.webp', 512, 88)):
+                                        ('corona-9.png', 'corona.webp', 512, 88),
+                                        ('paloma-21.png', 'paloma.webp', 400, 78), ('palomas-21.png', 'palomas.webp', 400, 78)):
     rgba = acuarela_sin_fondo(abrir(origen))
     if destino == 'banda.webp':
         rgba[..., 3] *= 0.55        # va detrás de texto: más aguada
@@ -105,3 +111,14 @@ for origen, destino, ancho, calidad in (('ramo-29.png', 'ramo.webp', 560, 72), (
     chico = {'ramo.webp': 320, 'ramo-2.webp': 320, 'banda.webp': 640}.get(destino)
     if chico:
         guardar(img, destino.replace('.webp', '-sm.webp'), chico, quality=calidad, method=6)
+
+# Estampilla: el papel crema es parte de ella, así que no se puede quitar
+# "todo lo blanco". Se recorta por diferencia con el fondo, desde el borde.
+rgb = abrir('estampilla-15.png')
+fondo = np.median(np.concatenate([rgb[:8].reshape(-1, 3), rgb[-8:].reshape(-1, 3)]), axis=0)
+dif = np.abs(rgb - fondo).max(axis=2)
+objeto = np.asarray(a_imagen((dif > 0.045).astype(np.float32)).filter(ImageFilter.MedianFilter(3))) > 127
+alfa = a_imagen((~desde_el_borde(objeto)).astype(np.float32)).filter(ImageFilter.GaussianBlur(.8))
+est = Image.open(RAW / 'estampilla-15.png').convert('RGB')
+est.putalpha(alfa)
+guardar(recortar(est, 2), 'estampilla.webp', 200, quality=84, method=6)
