@@ -133,6 +133,20 @@ está): **no las cambies después de mandar los links**, o dejan de
 reconocerse. La lista de nombres queda sólo en el navegador de quien la
 escribe; el sitio firma y devuelve, sin guardar nada.
 
+Además, en esa misma página:
+
+- **Quién ya confirmó**: cada invitado muestra *✓ Viene* / *No puede* buscando
+  su nombre entre las confirmaciones (sin "tía", "familia"…). Si confirmó con
+  otro nombre, se ve *Confirmó como "…"* para chequear el parecido.
+- **Recordatorio**: a quien ya se le mandó y no contestó, el botón pasa a ser
+  *Mandar recordatorio*, con su propio mensaje. Los tres mensajes (personal,
+  con pareja, recordatorio) se editan en *Los mensajes de WhatsApp*.
+- **Filtros**: todos, sin mandar, sin confirmar, confirmaron.
+- **Desde una planilla**: se pueden pegar las columnas *Nombre · Pareja ·
+  Celular* tal cual. El celular se escribe como sea (`11 5555-6666`,
+  `011 15…`, `+54 9…`) y queda en el formato de WhatsApp.
+- **Copiar la lista con los links**, para pegarla de vuelta en la planilla.
+
 El viejo `?para=Nombre` sigue andando, sólo para el sobre.
 
 ### Lo que ayuda al invitado a no olvidarse

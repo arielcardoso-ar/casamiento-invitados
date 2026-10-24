@@ -885,6 +885,46 @@ def admin_links_firmar():
     return jsonify({'tokens': tokens})
 
 
+# Palabras que se usan para nombrar a alguien en la lista de invitados pero que
+# nadie escribe al confirmar: "Tía Marta" confirma como "Marta Gómez".
+_TRATAMIENTOS = {'tia', 'tio', 'flia', 'familia', 'abu', 'abuela', 'abuelo',
+                 'prima', 'primo', 'sra', 'sr', 'dr', 'dra'}
+
+
+def _palabras(nombre):
+    import unicodedata
+    plano = unicodedata.normalize('NFKD', nombre or '')
+    plano = ''.join(c for c in plano if not unicodedata.combining(c)).lower()
+    return [p for p in ''.join(c if c.isalnum() else ' ' for c in plano).split()]
+
+
+@app.route('/admin/links/estado', methods=['POST'])
+def admin_links_estado():
+    """
+    Para cada invitado de /admin/links, si ya confirmó ('si', 'no' o '') y
+    con qué nombre, para que los novios vean si el parecido es el correcto.
+
+    Se busca por nombre, porque la confirmación no guarda de qué link vino: es
+    del invitado si todas las palabras de su nombre en la lista (sin "tía",
+    "familia"…) aparecen en el nombre con que confirmó. Como el formulario ya
+    viene con el nombre de la lista escrito, casi siempre coincide.
+    """
+    if not es_secreto_admin(request.args.get('secret')):
+        return jsonify({'error': 'Forbidden'}), 403
+    nombres = (request.get_json(silent=True) or {}).get('nombres') or []
+    # De la más nueva a la más vieja: vale la última respuesta de cada uno.
+    confirmaciones = [(set(_palabras(c['nombre'])), c)
+                      for c in db.get_confirmaciones()]
+    estados = []
+    for nombre in nombres[:500]:
+        buscadas = set(_palabras(str(nombre))) - _TRATAMIENTOS
+        c = next((c for palabras, c in confirmaciones
+                  if buscadas and buscadas <= palabras), None)
+        estados.append({'estado': '', 'como': ''} if c is None else
+                       {'estado': 'si' if c['asiste'] else 'no', 'como': c['nombre']})
+    return jsonify({'estados': estados})
+
+
 @app.errorhandler(413)
 def demasiado_grande(_e):
     return jsonify({'success': False,
