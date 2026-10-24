@@ -25,8 +25,9 @@ Extras para los novios, todos detrás de `?secret=<ADMIN_SECRET>`:
   entera en formato `tema - artista` para pegarla en el buscador de Spotify.
 - `/admin/google` — estado de la réplica en Drive y qué quedó pendiente.
   Con `&reintentar=1` reencola todo lo que todavía no llegó.
-- `/admin/links` — arma los links con nombre (ver *El sobre y el link con
-  nombre*) y los manda por WhatsApp de a uno, marcando a quién ya le llegó.
+- `/admin/links` — arma los links personales (individuales o con pareja,
+  ver *Invitación personal o con pareja*) y los manda por WhatsApp de a uno,
+  marcando a quién ya le llegó.
 - `/admin/sync-from-cloudinary` — reconstruye el índice de fotos.
 - `/qr-page` — QR imprimible para los carteles del salón (sin secreto).
 
@@ -110,10 +111,29 @@ https://<tu-sitio>/?para=Tía%20Marta
 (`%20` es el espacio; WhatsApp suele aceptarlo escrito con espacio también,
 pero con `%20` el link no se corta.) Sin `?para=` dice *Para vos*.
 
-No hace falta armarlos a mano: `/admin/links?secret=...` toma una lista de
-nombres (uno por renglón, y opcionalmente `, 5491155556666`) y para cada uno da
-el botón **Mandar por WhatsApp** con el mensaje listo. La lista queda sólo en
-el navegador de quien la escribe, no en el sitio.
+### Invitación personal o con pareja
+
+Para eso están los links de `/admin/links?secret=...`: un invitado por renglón,
+y para cada uno el botón **Mandar por WhatsApp** con el mensaje listo.
+
+| Renglón | Qué recibe |
+|---|---|
+| `Tía Marta` | Invitación personal, un lugar. El sobre dice *Para Tía Marta* y el RSVP aclara que es para ella. |
+| `Juli + Nico` | Invitados los dos. Sobre *Para Juli y Nico*, la invitación les habla en plural y el RSVP ofrece **Vamos los dos / Sólo voy yo / No vamos a poder**. |
+| `Pablo + pareja` | Igual, pero sin saber el nombre: el RSVP se lo pregunta al confirmar. |
+| `…, 5491155556666` | Al final de cualquiera: WhatsApp abre directo esa conversación. |
+
+"Vamos los dos" deja **dos filas** en `/admin/confirmaciones` y en la planilla
+(la pareja con el mensaje *Viene con …*), así que las cuentas salen solas.
+
+El link lleva `?i=<token>` **firmado** por el sitio. Si alguien lo edita para
+sumarse un lugar, el token deja de valer y ve la invitación general, donde no
+existe "vamos los dos". La firma usa `SECRET_KEY` (o `ADMIN_SECRET` si no
+está): **no las cambies después de mandar los links**, o dejan de
+reconocerse. La lista de nombres queda sólo en el navegador de quien la
+escribe; el sitio firma y devuelve, sin guardar nada.
+
+El viejo `?para=Nombre` sigue andando, sólo para el sobre.
 
 ### Lo que ayuda al invitado a no olvidarse
 

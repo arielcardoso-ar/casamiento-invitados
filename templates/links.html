@@ -37,6 +37,12 @@
     justify-content: center; text-align: center;
 }
 .link-item.enviado { opacity: .55; }
+.link-item .tipo {
+    display: inline-block; margin-left: .4rem; padding: .1rem .55rem; border-radius: 99px;
+    font-family: var(--font-ui); font-size: .7rem; font-weight: 600; vertical-align: middle;
+    background: var(--green-50); border: 1px solid var(--line); color: var(--green-700);
+}
+.link-item .tipo.dos { background: var(--rose-50); border-color: var(--rose-200); color: var(--rose-700); }
 .link-item.enviado .quien::after { content: ' · enviado'; font-weight: 400; color: var(--muted); }
 
 .links-total { text-align: center; color: var(--muted); font-size: .86rem; margin: 1rem 0 .6rem; }
@@ -45,20 +51,23 @@
 {% block content %}
 <div class="links-head">
     <h1>Links con nombre</h1>
-    <p>Cada invitado recibe la invitación con su nombre escrito en el sobre.
-       Los nombres no salen de este celular: no se guardan en el sitio.</p>
+    <p>Cada invitado recibe la invitación con su nombre en el sobre, y si va con
+       pareja, la invitación les habla a los dos. La lista no se guarda en el sitio.</p>
 </div>
 
 <div class="links-form">
-    <label for="nombres">Un invitado (o una familia) por renglón</label>
+    <label for="nombres">Un invitado por renglón</label>
     <textarea class="input-field" id="nombres" spellcheck="false"
-              placeholder="Familia Pérez&#10;Tía Marta, 5491155556666&#10;Juli y Nico"></textarea>
-    <p class="ayuda">Si después de una coma ponés el celular (con 549 adelante, sin espacios),
-       WhatsApp abre directo esa conversación. Si no, elegís el contacto vos.</p>
+              placeholder="Tía Marta&#10;Juli + Nico&#10;Pablo + pareja, 5491155556666"></textarea>
+    <p class="ayuda"><strong>Solo el nombre</strong>: invitación personal, un lugar.<br>
+       <strong>Nombre + Pareja</strong>: invitados los dos, dos lugares (<code>Juli + Nico</code>).
+       Si no sabés cómo se llama, poné <code>+ pareja</code> y se lo preguntamos al confirmar.<br>
+       Después de una coma, el celular (con 549 adelante) abre directo esa conversación.</p>
 
     <label for="mensaje">El mensaje</label>
     <textarea class="input-field mensaje" id="mensaje"></textarea>
-    <p class="ayuda"><code>{nombre}</code> y <code>{link}</code> se reemplazan en cada uno.</p>
+    <p class="ayuda"><code>{nombre}</code>, <code>{link}</code> y <code>{verbo}</code>
+       (estés / estén) se reemplazan en cada uno.</p>
 </div>
 
 <p class="links-total" id="total"></p>
@@ -70,7 +79,9 @@
 (function () {
     'use strict';
     const SITIO = {{ sitio|tojson }};
-    const MENSAJE = '¡Hola {nombre}! 💌 Nos casamos y queremos que estés. '
+    const SECRETO = new URLSearchParams(location.search).get('secret') || '';
+    // {verbo} queda "estés" o "estén": el mismo mensaje sirve para los dos casos.
+    const MENSAJE = '¡Hola {nombre}! 💌 Nos casamos y queremos que {verbo}. '
                   + 'Acá está tu invitación: {link}';
     const nombres = document.getElementById('nombres');
     const mensaje = document.getElementById('mensaje');
@@ -85,27 +96,65 @@
     mensaje.value = guardado('ka:links:mensaje') || MENSAJE;
     let enviados = new Set(JSON.parse(guardado('ka:links:enviados') || '[]'));
 
-    const linkPara = nombre => `${SITIO}?para=${encodeURIComponent(nombre)}`;
+    // "Nombre + Pareja, 549…": la pareja y el celular son opcionales. Con
+    // "+ pareja" (así, en minúscula) va con pareja pero sin nombre todavía.
+    function leerFila(linea) {
+        const [resto, tel = ''] = linea.split(/\s*,\s*(?=[\d+\s-]+$)/);
+        const [nombre, pareja] = resto.split(/\s*\+\s*/);
+        const conPareja = pareja !== undefined;
+        const parejaNombre = conPareja && pareja.trim().toLowerCase() !== 'pareja' ? pareja.trim() : '';
+        return { nombre: nombre.trim().slice(0, 60), con_pareja: conPareja,
+                 pareja: parejaNombre.slice(0, 60), tel: tel.replace(/\D/g, '') };
+    }
 
-    function pintar() {
+    // El link lleva un token firmado por el sitio: si alguien lo edita para
+    // sumarse un lugar, deja de valer. Por eso se piden al servidor, que
+    // firma y devuelve sin guardar nada.
+    const firmas = new Map();
+    const claveFila = f => JSON.stringify([f.nombre, f.con_pareja, f.pareja]);
+    async function firmar(filas) {
+        const faltan = filas.filter(f => !firmas.has(claveFila(f)));
+        if (!faltan.length) return;
+        const r = await fetch(`/admin/links/firmar?secret=${encodeURIComponent(SECRETO)}`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ invitados: faltan }),
+        });
+        const { tokens } = await r.json();
+        faltan.forEach((f, i) => firmas.set(claveFila(f), tokens[i]));
+    }
+    const linkPara = f => `${SITIO}?i=${firmas.get(claveFila(f))}`;
+    const quienes = f => f.con_pareja ? `${f.nombre} y ${f.pareja || 'pareja'}` : f.nombre;
+
+    let turno = 0;
+    async function pintar() {
         guardar('ka:links:nombres', nombres.value);
         guardar('ka:links:mensaje', mensaje.value);
-        const filas = nombres.value.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
-            const [nombre, tel = ''] = l.split(/\s*,\s*(?=[\d+\s-]+$)/);
-            return { nombre: nombre.slice(0, 60), tel: tel.replace(/\D/g, '') };
-        });
+        const filas = nombres.value.split('\n').map(l => l.trim()).filter(Boolean)
+            .map(leerFila).filter(f => f.nombre);
+        const mio = ++turno;
+        try { await firmar(filas); } catch { total.textContent = 'No se pudieron armar los links. Revisá la conexión.'; return; }
+        if (mio !== turno) return;   // ya se escribió algo más nuevo
         total.textContent = filas.length
-            ? `${filas.length} link${filas.length === 1 ? '' : 's'} · ${filas.filter(f => enviados.has(f.nombre)).length} enviado(s)`
+            ? `${filas.length} link${filas.length === 1 ? '' : 's'} · `
+              + `${filas.reduce((n, f) => n + (f.con_pareja ? 2 : 1), 0)} lugares · `
+              + `${filas.filter(f => enviados.has(quienes(f))).length} enviado(s)`
             : '';
-        lista.replaceChildren(...filas.map(({ nombre, tel }) => {
-            const link = linkPara(nombre);
-            const texto = mensaje.value.replaceAll('{nombre}', nombre).replaceAll('{link}', link);
+        lista.replaceChildren(...filas.map(f => {
+            const { tel } = f;
+            const nombre = quienes(f);
+            const link = linkPara(f);
+            const saludo = f.con_pareja && f.pareja ? `${f.nombre} y ${f.pareja}` : f.nombre;
+            const texto = mensaje.value.replaceAll('{nombre}', saludo).replaceAll('{link}', link)
+                .replaceAll('{verbo}', f.con_pareja ? 'estén' : 'estés');
             const li = document.createElement('li');
             li.className = 'link-item' + (enviados.has(nombre) ? ' enviado' : '');
 
             const quien = document.createElement('span');
             quien.className = 'quien';
             quien.textContent = nombre + (tel ? ` · ${tel}` : '');
+            const tipo = document.createElement('span');
+            tipo.className = 'tipo' + (f.con_pareja ? ' dos' : '');
+            tipo.textContent = f.con_pareja ? 'Con pareja · 2 lugares' : 'Personal · 1 lugar';
             const url = document.createElement('a');
             url.className = 'url'; url.href = link; url.target = '_blank'; url.rel = 'noopener';
             url.textContent = link;
@@ -132,13 +181,16 @@
             cp.addEventListener('click', marcar);
 
             acciones.append(wa, cp);
-            li.append(quien, url, acciones);
+            li.append(quien, tipo, url, acciones);
             return li;
         }));
     }
 
-    nombres.addEventListener('input', pintar);
-    mensaje.addEventListener('input', pintar);
+    // Un respiro entre teclas: no hace falta firmar a medio escribir.
+    let espera;
+    const pintarEnUnRato = () => { clearTimeout(espera); espera = setTimeout(pintar, 350); };
+    nombres.addEventListener('input', pintarEnUnRato);
+    mensaje.addEventListener('input', pintarEnUnRato);
     pintar();
 })();
 </script>

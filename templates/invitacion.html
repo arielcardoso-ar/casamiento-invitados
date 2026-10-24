@@ -337,6 +337,10 @@
         max-width: 34ch; margin: 0 auto; font-size: clamp(1.2rem, 4.4vw, 1.5rem);
         color: var(--ink-soft); line-height: 1.75; font-weight: 300;
     }
+    .welcome .saludo {
+        font-family: var(--font-script2); font-size: clamp(2rem, 7vw, 2.6rem);
+        color: var(--rose-500); line-height: 1.2; margin-bottom: .8rem; max-width: none;
+    }
     .welcome .families {
         margin-top: 2rem; font-family: var(--font-caps);
         font-size: .72rem; letter-spacing: .28em; text-transform: uppercase; color: var(--rose-600);
@@ -466,11 +470,14 @@
         font-family: var(--font-ui); font-size: .94rem; font-weight: 600;
         transition: background .2s, border-color .2s, color .2s;
     }
+    /* Con pareja son tres: "vamos los dos" arriba, a lo ancho. */
+    .rsvp-asiste.tres label:first-of-type { grid-column: 1 / -1; }
     .rsvp-asiste input:checked + label {
         background: var(--green-50); border-color: var(--green-400); color: var(--green-800);
     }
     .rsvp-asiste input:focus-visible + label { outline: 2px solid var(--green-500); outline-offset: 2px; }
     .rsvp-extra { display: grid; gap: .65rem; }
+    .rsvp-form [hidden] { display: none; }
     .rsvp-estado {
         min-height: 1.5rem; text-align: center; font-family: var(--font-ui);
         font-size: .92rem; font-weight: 600; color: var(--green-700);
@@ -743,6 +750,13 @@
 </script>
 </head>
 <body>
+{#- Quién recibe esta invitación, si vino por un link personal (?i=…, firmado
+    en app.py). `dos` es el invitado con pareja: la invitación les habla a los
+    dos y el RSVP ofrece "vamos los dos". Sin link personal, todo como siempre. -#}
+{% set dos = invitado and invitado.con_pareja %}
+{% if invitado %}
+    {% set destinatario = invitado.nombre ~ (' y ' ~ (invitado.pareja or 'acompañante') if dos else '') %}
+{% endif %}
 
 {#- La capa de polaroids de una sección. Va en posición absoluta detrás del
     contenido, así que no le agrega un solo píxel de alto a la página.
@@ -788,7 +802,7 @@
         </div>
         <div class="sobre-frente"></div>
         <div class="sobre-solapa"></div>
-        <p class="sobre-para" id="sobrePara">Para vos</p>
+        <p class="sobre-para" id="sobrePara"{% if invitado %} data-fijo{% endif %}>Para {{ destinatario if invitado else 'vos' }}</p>
         <button type="button" class="sobre-sello" id="sobreAbrir"
                 aria-label="Abrir la invitación"><span>{{ novia_corto[:1] }}<small>&amp;</small>{{ novio_corto[:1] }}</span></button>
     </div>
@@ -1021,7 +1035,9 @@
 <!-- ══════════════════════════ BIENVENIDA ══════════════════════════ -->
 <section class="tiene-fondo welcome">
     {{ capa('welcome') }}
-    <p class="reveal">Después de tanto camino recorrido juntos, llegó el día de decirnos que sí. Nos encantaría que estés ahí para verlo.</p>
+    {% if invitado %}<p class="saludo reveal">{{ invitado.nombre }}{% if dos and invitado.pareja %} y {{ invitado.pareja }}{% endif %}:</p>{% endif %}
+    <p class="reveal">Después de tanto camino recorrido juntos, llegó el día de decirnos que sí.
+        {% if dos %}Nos encantaría que estén los dos ahí para verlo.{% else %}Nos encantaría que estés ahí para verlo.{% endif %}</p>
     <p class="families reveal d1">{{ novia_corto }} &amp; {{ novio_corto }}</p>
 </section>
 
@@ -1143,24 +1159,47 @@
     {{ capa('rsvp') }}
     <h2 class="kicker-script reveal">Confirmá tu lugar</h2>
     <div class="reveal d1">
+        {% if dos %}
+        <p class="lead">Su presencia es nuestro mejor regalo.<br>Avísennos si vienen así reservamos sus sillas.</p>
+        <p class="deadline">La invitación es para los dos: con una sola confirmación alcanza.</p>
+        {% elif invitado %}
+        <p class="lead">Tu presencia es nuestro mejor regalo.<br>Avisanos si venís así reservamos tu silla.</p>
+        <p class="deadline">Esta invitación es personal, para vos.</p>
+        {% else %}
         <p class="lead">Tu presencia es nuestro mejor regalo.<br>Avisanos si venís así reservamos tu silla.</p>
         <p class="deadline">La confirmación es individual: si van varios de tu familia o grupo, que cada uno complete la suya.</p>
+        {% endif %}
 
-        <form class="rsvp-form" id="formRsvp" novalidate>
+        <form class="rsvp-form" id="formRsvp" novalidate
+              data-invitacion="{{ invitacion_token }}" data-nombre="{{ invitado.nombre if invitado else '' }}">
             <input class="input-field" id="rsvpNombre" maxlength="80" required
                    autocomplete="name" placeholder="Tu nombre y apellido"
                    aria-label="Tu nombre y apellido">
 
+            {% if dos %}
+            <div class="rsvp-asiste tres">
+                <input type="radio" name="asiste" id="rsvpDos" value="2" checked>
+                <label for="rsvpDos">🌿 Vamos los dos</label>
+                <input type="radio" name="asiste" id="rsvpSi" value="1">
+                <label for="rsvpSi">Sólo voy yo</label>
+                <input type="radio" name="asiste" id="rsvpNo" value="0">
+                <label for="rsvpNo">No vamos a poder</label>
+            </div>
+            <input class="input-field" id="rsvpPareja" maxlength="80" autocomplete="off"
+                   value="{{ invitado.pareja }}" placeholder="Nombre y apellido de tu pareja"
+                   aria-label="Nombre y apellido de tu pareja">
+            {% else %}
             <div class="rsvp-asiste">
                 <input type="radio" name="asiste" id="rsvpSi" value="1" checked>
                 <label for="rsvpSi">🌿 Ahí estaré</label>
                 <input type="radio" name="asiste" id="rsvpNo" value="0">
                 <label for="rsvpNo">No voy a poder</label>
             </div>
+            {% endif %}
 
             <div class="rsvp-extra" id="rsvpExtra">
                 <input class="input-field" id="rsvpRestric" maxlength="200"
-                       placeholder="¿Alguna restricción con la comida?"
+                       placeholder="{{ '¿Alguno tiene restricciones con la comida?' if dos else '¿Alguna restricción con la comida?' }}"
                        aria-label="Restricciones con la comida">
             </div>
 
@@ -1260,7 +1299,9 @@
         try {
             const para = (new URLSearchParams(location.search).get('para') || '')
                 .replace(/\s+/g, ' ').trim().slice(0, 60);
-            if (para) document.getElementById('sobrePara').textContent = 'Para ' + para;
+            const destino = document.getElementById('sobrePara');
+            // Un link personal firmado manda sobre el ?para= suelto.
+            if (para && !destino.hasAttribute('data-fijo')) destino.textContent = 'Para ' + para;
         } catch {}
 
         const video = document.querySelector('.hero-video');
@@ -1317,16 +1358,23 @@
     if (formRsvp) {
         const CLAVE_NOMBRE = 'ka:nombre';
         const nombre  = document.getElementById('rsvpNombre');
-        const si      = document.getElementById('rsvpSi');
+        const pareja  = document.getElementById('rsvpPareja');   // sólo con pareja
         const extra   = document.getElementById('rsvpExtra');
         const estado  = document.getElementById('rsvpEstado');
         const boton   = document.getElementById('btnRsvp');
         const texto   = document.getElementById('btnRsvpTexto');
 
         try { nombre.value = localStorage.getItem(CLAVE_NOMBRE) || ''; } catch {}
+        if (!nombre.value) nombre.value = formRsvp.dataset.nombre || '';
 
-        // Si no viene, preguntarle cuántos lo acompañan no tiene sentido.
-        const ajustarExtra = () => { extra.hidden = !si.checked; };
+        // "2" vamos los dos · "1" sólo yo · "0" no. Sin pareja, sólo 1 y 0.
+        const eleccion = () => formRsvp.querySelector('input[name=asiste]:checked').value;
+        // Si no viene, preguntarle por la comida no tiene sentido; y el
+        // nombre de la pareja, sólo si vienen los dos.
+        const ajustarExtra = () => {
+            extra.hidden = eleccion() === '0';
+            if (pareja) pareja.hidden = eleccion() !== '2';
+        };
         formRsvp.querySelectorAll('input[name=asiste]')
             .forEach(r => r.addEventListener('change', ajustarExtra));
         ajustarExtra();
@@ -1337,6 +1385,12 @@
                 estado.className = 'rsvp-estado error';
                 estado.textContent = 'Decinos tu nombre así sabemos quién sos.';
                 nombre.focus();
+                return;
+            }
+            if (pareja && eleccion() === '2' && !pareja.value.trim()) {
+                estado.className = 'rsvp-estado error';
+                estado.textContent = 'Decinos también el nombre de tu pareja.';
+                pareja.focus();
                 return;
             }
 
@@ -1351,7 +1405,9 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         nombre: nombre.value.trim(),
-                        asiste: si.checked ? 1 : 0,
+                        asiste: Number(eleccion()),
+                        invitacion: formRsvp.dataset.invitacion || '',
+                        pareja: pareja ? pareja.value.trim() : '',
                         restricciones: document.getElementById('rsvpRestric').value.trim(),
                         mensaje: document.getElementById('rsvpMensaje').value.trim(),
                     }),
@@ -1365,7 +1421,7 @@
                 } catch {}
                 estado.className = 'rsvp-estado';
                 estado.textContent = d.asiste
-                    ? '¡Listo! Te esperamos 🌿'
+                    ? (d.dos ? '¡Listo! Los esperamos a los dos 🌿' : '¡Listo! Te esperamos 🌿')
                     : 'Gracias por avisarnos. Te vamos a extrañar.';
                 texto.textContent = 'Cambiar mi respuesta';
                 document.getElementById('rsvpListo').hidden = !d.asiste;
