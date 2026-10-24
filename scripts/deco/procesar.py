@@ -92,10 +92,16 @@ guardar(cuad, 'lacre.webp', 240, quality=86, method=6)
 
 # Acuarelas con transparencia.
 for origen, destino, ancho, calidad in (('ramo-29.png', 'ramo.webp', 560, 72), ('ramo-3.png', 'ramo-2.webp', 560, 72),
-                                        ('ramita-7.png', 'ramita.webp', 300, 78), ('banda-41.png', 'banda.webp', 960, 66)):
+                                        ('ramita-7.png', 'ramita.webp', 300, 78), ('banda-41.png', 'banda.webp', 960, 66),
+                                        ('guirnalda-12.png', 'guirnalda.webp', 640, 76), ('guirnalda-44.png', 'guirnalda-2.webp', 480, 76),
+                                        ('corona-9.png', 'corona.webp', 512, 88)):
     rgba = acuarela_sin_fondo(abrir(origen))
     if destino == 'banda.webp':
         rgba[..., 3] *= 0.55        # va detrás de texto: más aguada
     rgba = (rgba * 255).round().astype(np.uint8)
-    guardar(recortar(Image.frombuffer('RGBA', rgba.shape[1::-1], rgba.tobytes())),
-            destino, ancho, quality=calidad, method=6)
+    img = recortar(Image.frombuffer('RGBA', rgba.shape[1::-1], rgba.tobytes()))
+    guardar(img, destino, ancho, quality=calidad, method=6)
+    # Versión para celular: el ramo se ve a 150 px y la banda a ~500.
+    chico = {'ramo.webp': 320, 'ramo-2.webp': 320, 'banda.webp': 640}.get(destino)
+    if chico:
+        guardar(img, destino.replace('.webp', '-sm.webp'), chico, quality=calidad, method=6)

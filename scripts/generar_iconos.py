@@ -15,6 +15,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 RAIZ = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 DESTINO = os.path.join(RAIZ, 'static', 'img')
+CORONA = os.path.join(DESTINO, 'deco', 'corona.webp')
 
 CREMA = (253, 252, 249)
 VERDE = (59, 76, 51)
@@ -44,16 +45,23 @@ def dibujar(lado, margen):
     x0 = y0 = lado * margen
     x1 = y1 = x0 + util
 
-    # Aro exterior salvia y aro interior rosa: el mismo doble filete del hero.
-    d.ellipse([x0, y0, x1, y1], outline=SALVIA, width=max(2, int(lado * 0.016)))
-    aire = util * 0.055
-    d.ellipse([x0 + aire, y0 + aire, x1 - aire, y1 - aire],
-              outline=ROSA, width=max(1, int(lado * 0.008)))
+    if os.path.exists(CORONA):
+        # La corona de eucalipto en acuarela (scripts/deco), la misma familia
+        # que los ramos de la invitación.
+        corona = Image.open(CORONA).convert('RGBA')
+        corona.thumbnail((int(util), int(util)), Image.LANCZOS)
+        img.paste(corona, (int(lado / 2 - corona.width / 2), int(lado / 2 - corona.height / 2)), corona)
+    else:
+        # Aro exterior salvia y aro interior rosa: el mismo doble filete del hero.
+        d.ellipse([x0, y0, x1, y1], outline=SALVIA, width=max(2, int(lado * 0.016)))
+        aire = util * 0.055
+        d.ellipse([x0 + aire, y0 + aire, x1 - aire, y1 - aire],
+                  outline=ROSA, width=max(1, int(lado * 0.008)))
 
     # Monograma centrado sobre el alto real del glifo, no sobre la caja de la
     # fuente: si no, las mayúsculas caligráficas quedan visiblemente bajas.
     texto = 'K&A'
-    fuente = _fuente(int(util * 0.32))
+    fuente = _fuente(int(util * (0.26 if os.path.exists(CORONA) else 0.32)))
     izq, arriba, der, abajo = d.textbbox((0, 0), texto, font=fuente)
     d.text((lado / 2 - (der - izq) / 2 - izq,
             lado / 2 - (abajo - arriba) / 2 - arriba),

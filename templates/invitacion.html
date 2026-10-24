@@ -20,6 +20,7 @@
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="{{ novia }} y {{ novio }} — {{ fecha_larga }}">
 <meta name="twitter:card" content="summary_large_image">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='img/icono-192.png') }}">
 <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
 
 <title>{{ novia_corto }} &amp; {{ novio_corto }} — {{ fecha_corta }}</title>
@@ -326,6 +327,12 @@
         color: var(--green-700); line-height: 1.05; text-align: center;
         margin-bottom: .5rem;
     }
+    /* Una guirnalda de eucalipto y pimpollos bajo cada título. */
+    .kicker-script::after {
+        content: ''; display: block;
+        width: min(230px, 60vw); aspect-ratio: 640 / 110; margin: .55rem auto 0;
+        background: url('{{ url_for('static', filename='img/deco/guirnalda.webp') }}') center / contain no-repeat;
+    }
     .section-sub {
         text-align: center; color: var(--muted); font-size: 1.05rem;
         font-style: italic; margin-bottom: clamp(2.2rem, 6vw, 3.2rem);
@@ -389,8 +396,12 @@
         text-align: center;
         /* Una pincelada de acuarela detrás de la frase, como en la tarjeta impresa. */
         background:
-            url('{{ url_for('static', filename='img/deco/banda.webp') }}') center / clamp(480px, 135vw, 900px) auto no-repeat,
+            url('{{ url_for('static', filename='img/deco/banda-sm.webp') }}') center / clamp(480px, 135vw, 900px) auto no-repeat,
             linear-gradient(170deg, var(--rose-50) 0%, var(--rose-100) 100%);
+    }
+    /* En pantallas anchas, la pincelada en su tamaño grande. */
+    @media (min-width: 700px) {
+        .band { background-image: url('{{ url_for('static', filename='img/deco/banda.webp') }}'), linear-gradient(170deg, var(--rose-50) 0%, var(--rose-100) 100%); }
     }
     .band .quote {
         max-width: 22ch; margin: 0 auto; font-style: italic; font-weight: 300;
@@ -662,6 +673,10 @@
     .sobre-carta .nombres {
         font-family: var(--font-script); font-size: clamp(1.7rem, 7.5vw, 2.4rem);
         color: var(--green-800); line-height: 1.1;
+    }
+    .sobre-carta::after {
+        content: ''; width: 58%; aspect-ratio: 480 / 87; margin-top: .45rem;
+        background: url('{{ url_for('static', filename='img/deco/guirnalda-2.webp') }}') center / contain no-repeat;
     }
     .sobre-carta .fecha {
         font-family: var(--font-caps); font-size: .66rem; letter-spacing: .32em;
@@ -1264,8 +1279,8 @@
 
 <!-- ══════════════════════════ CANCIÓN ══════════════════════════ -->
 <section class="cancion" id="cancion">
-    <img class="deco-ramo izq" src="{{ url_for('static', filename='img/deco/ramo.webp') }}" alt="" aria-hidden="true" loading="lazy" decoding="async" width="560" height="649">
-    <img class="deco-ramo der" src="{{ url_for('static', filename='img/deco/ramo-2.webp') }}" alt="" aria-hidden="true" loading="lazy" decoding="async" width="560" height="504">
+    <img class="deco-ramo izq" src="{{ url_for('static', filename='img/deco/ramo-sm.webp') }}" srcset="{{ url_for('static', filename='img/deco/ramo-sm.webp') }} 320w, {{ url_for('static', filename='img/deco/ramo.webp') }} 560w" sizes="(max-width: 560px) 150px, 30vw" alt="" aria-hidden="true" loading="lazy" decoding="async" width="560" height="649">
+    <img class="deco-ramo der" src="{{ url_for('static', filename='img/deco/ramo-2-sm.webp') }}" srcset="{{ url_for('static', filename='img/deco/ramo-2-sm.webp') }} 320w, {{ url_for('static', filename='img/deco/ramo-2.webp') }} 560w" sizes="(max-width: 560px) 150px, 30vw" alt="" aria-hidden="true" loading="lazy" decoding="async" width="560" height="504">
     <h2 class="kicker-script reveal">Sumá una canción</h2>
     <p class="section-sub reveal">Para que la pista no pare</p>
     <p class="cancion-nota reveal d1">Decinos cuál es el tema que no puede faltar y lo agregamos a la playlist de la fiesta.</p>
