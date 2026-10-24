@@ -317,7 +317,7 @@ img { max-width: 100%; display: block; }
     transition: border-color .2s, box-shadow .2s, background .2s;
     -webkit-appearance: none;
 }
-.input-field::placeholder { color: #a3ab99; }
+.input-field::placeholder { color: #858f78; }
 .input-field:focus {
     outline: none;
     background: var(--white);
