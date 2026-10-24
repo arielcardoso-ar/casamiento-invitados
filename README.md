@@ -25,6 +25,8 @@ Extras para los novios, todos detrás de `?secret=<ADMIN_SECRET>`:
   entera en formato `tema - artista` para pegarla en el buscador de Spotify.
 - `/admin/google` — estado de la réplica en Drive y qué quedó pendiente.
   Con `&reintentar=1` reencola todo lo que todavía no llegó.
+- `/admin/links` — arma los links con nombre (ver *El sobre y el link con
+  nombre*) y los manda por WhatsApp de a uno, marcando a quién ya le llegó.
 - `/admin/sync-from-cloudinary` — reconstruye el índice de fotos.
 - `/qr-page` — QR imprimible para los carteles del salón (sin secreto).
 
@@ -108,6 +110,11 @@ https://<tu-sitio>/?para=Tía%20Marta
 (`%20` es el espacio; WhatsApp suele aceptarlo escrito con espacio también,
 pero con `%20` el link no se corta.) Sin `?para=` dice *Para vos*.
 
+No hace falta armarlos a mano: `/admin/links?secret=...` toma una lista de
+nombres (uno por renglón, y opcionalmente `, 5491155556666`) y para cada uno da
+el botón **Mandar por WhatsApp** con el mensaje listo. La lista queda sólo en
+el navegador de quien la escribe, no en el sitio.
+
 ### Lo que ayuda al invitado a no olvidarse
 
 - **Botón flotante "Confirmar asistencia"**: aparece al bajar de la portada y
@@ -117,8 +124,10 @@ pero con `%20` el link no se corta.) Sin `?para=` dice *Para vos*.
   y el `.ics` de siempre para iPhone y Outlook. Se ofrece en la cuenta
   regresiva y otra vez apenas el invitado confirma.
 - **Cómo llegar**: debajo de cada mapa, Google Maps y Waze con un toque.
-  Waze busca por nombre (`FIESTA_MAPA` / `CEREMONIA_MAPA`); si alguna vez
-  marca otro lugar, afiná ese texto.
+  Al salón, Waze va por coordenadas: las saca solo del `FIESTA_EMBED`
+  (buscando "Salón Ble" por nombre podía proponer otro lugar). Para la
+  iglesia busca por `CEREMONIA_MAPA`. Cualquiera de los dos se puede fijar a
+  mano con `FIESTA_COORDS` / `CEREMONIA_COORDS` (`-34.60,-58.51`).
 
 ---
 

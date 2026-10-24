@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Links con nombre — {{ novia_corto }} &amp; {{ novio_corto }}{% endblock %}
+
+{% block styles %}
+.links-head { text-align: center; padding: .5rem 0 1.5rem; }
+.links-head h1 {
+    font-family: var(--font-serif); font-size: clamp(1.6rem, 6vw, 2rem);
+    font-weight: 400; color: var(--green-800); margin-bottom: .4rem;
+}
+.links-head p { color: var(--muted); font-size: .94rem; max-width: 40ch; margin: 0 auto; }
+
+.links-form { display: grid; gap: .5rem; margin-bottom: 1.5rem; }
+.links-form label {
+    font-family: var(--font-ui); font-size: .84rem; font-weight: 600; color: var(--green-800);
+    margin-top: .6rem;
+}
+.links-form .ayuda { font-family: var(--font-ui); font-size: .8rem; color: var(--muted); }
+.links-form textarea.input-field { min-height: 9rem; resize: vertical; line-height: 1.5; }
+.links-form textarea.mensaje { min-height: 6.5rem; }
+
+.links-lista { list-style: none; display: grid; gap: .6rem; }
+.link-item {
+    padding: .9rem 1rem;
+    background: var(--white); border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+}
+.link-item .quien { font-weight: 600; color: var(--green-800); }
+.link-item .url {
+    display: block; margin: .25rem 0 .7rem;
+    font-family: var(--font-ui); font-size: .78rem; color: var(--muted);
+    overflow-wrap: anywhere;
+}
+.link-item .acciones { display: flex; gap: .5rem; flex-wrap: wrap; }
+.link-item .acciones .btn {
+    flex: 1 1 9rem; min-height: 44px; font-size: .86rem;
+    justify-content: center; text-align: center;
+}
+.link-item.enviado { opacity: .55; }
+.link-item.enviado .quien::after { content: ' · enviado'; font-weight: 400; color: var(--muted); }
+
+.links-total { text-align: center; color: var(--muted); font-size: .86rem; margin: 1rem 0 .6rem; }
+{% endblock %}
+
+{% block content %}
+<div class="links-head">
+    <h1>Links con nombre</h1>
+    <p>Cada invitado recibe la invitación con su nombre escrito en el sobre.
+       Los nombres no salen de este celular: no se guardan en el sitio.</p>
+</div>
+
+<div class="links-form">
+    <label for="nombres">Un invitado (o una familia) por renglón</label>
+    <textarea class="input-field" id="nombres" spellcheck="false"
+              placeholder="Familia Pérez&#10;Tía Marta, 5491155556666&#10;Juli y Nico"></textarea>
+    <p class="ayuda">Si después de una coma ponés el celular (con 549 adelante, sin espacios),
+       WhatsApp abre directo esa conversación. Si no, elegís el contacto vos.</p>
+
+    <label for="mensaje">El mensaje</label>
+    <textarea class="input-field mensaje" id="mensaje"></textarea>
+    <p class="ayuda"><code>{nombre}</code> y <code>{link}</code> se reemplazan en cada uno.</p>
+</div>
+
+<p class="links-total" id="total"></p>
+<ul class="links-lista" id="lista"></ul>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    'use strict';
+    const SITIO = {{ sitio|tojson }};
+    const MENSAJE = '¡Hola {nombre}! 💌 Nos casamos y queremos que estés. '
+                  + 'Acá está tu invitación: {link}';
+    const nombres = document.getElementById('nombres');
+    const mensaje = document.getElementById('mensaje');
+    const lista   = document.getElementById('lista');
+    const total   = document.getElementById('total');
+
+    // Lo que se escribe queda en este navegador, para no tener que volver a
+    // cargar la lista si se cierra la pestaña a mitad de los envíos.
+    const guardado = clave => { try { return localStorage.getItem(clave); } catch { return null; } };
+    const guardar  = (clave, v) => { try { localStorage.setItem(clave, v); } catch {} };
+    nombres.value = guardado('ka:links:nombres') || '';
+    mensaje.value = guardado('ka:links:mensaje') || MENSAJE;
+    let enviados = new Set(JSON.parse(guardado('ka:links:enviados') || '[]'));
+
+    const linkPara = nombre => `${SITIO}?para=${encodeURIComponent(nombre)}`;
+
+    function pintar() {
+        guardar('ka:links:nombres', nombres.value);
+        guardar('ka:links:mensaje', mensaje.value);
+        const filas = nombres.value.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+            const [nombre, tel = ''] = l.split(/\s*,\s*(?=[\d+\s-]+$)/);
+            return { nombre: nombre.slice(0, 60), tel: tel.replace(/\D/g, '') };
+        });
+        total.textContent = filas.length
+            ? `${filas.length} link${filas.length === 1 ? '' : 's'} · ${filas.filter(f => enviados.has(f.nombre)).length} enviado(s)`
+            : '';
+        lista.replaceChildren(...filas.map(({ nombre, tel }) => {
+            const link = linkPara(nombre);
+            const texto = mensaje.value.replaceAll('{nombre}', nombre).replaceAll('{link}', link);
+            const li = document.createElement('li');
+            li.className = 'link-item' + (enviados.has(nombre) ? ' enviado' : '');
+
+            const quien = document.createElement('span');
+            quien.className = 'quien';
+            quien.textContent = nombre + (tel ? ` · ${tel}` : '');
+            const url = document.createElement('a');
+            url.className = 'url'; url.href = link; url.target = '_blank'; url.rel = 'noopener';
+            url.textContent = link;
+
+            const acciones = document.createElement('div');
+            acciones.className = 'acciones';
+            const wa = document.createElement('a');
+            wa.className = 'btn btn-primary';
+            wa.href = `https://wa.me/${tel}?text=${encodeURIComponent(texto)}`;
+            wa.target = '_blank'; wa.rel = 'noopener';
+            wa.textContent = 'Mandar por WhatsApp';
+            const cp = document.createElement('button');
+            cp.type = 'button'; cp.className = 'btn btn-ghost';
+            cp.textContent = 'Copiar mensaje';
+            cp.addEventListener('click', () => copiar(texto, 'Mensaje copiado'));
+
+            // Marcarlo como enviado al tocar cualquiera de los dos.
+            const marcar = () => {
+                enviados.add(nombre);
+                guardar('ka:links:enviados', JSON.stringify([...enviados]));
+                setTimeout(pintar, 300);
+            };
+            wa.addEventListener('click', marcar);
+            cp.addEventListener('click', marcar);
+
+            acciones.append(wa, cp);
+            li.append(quien, url, acciones);
+            return li;
+        }));
+    }
+
+    nombres.addEventListener('input', pintar);
+    mensaje.addEventListener('input', pintar);
+    pintar();
+})();
+</script>
+{% endblock %}

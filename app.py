@@ -786,6 +786,22 @@ def admin_canciones():
                            total=db.contar_canciones())
 
 
+@app.route('/admin/links')
+def admin_links():
+    """
+    Arma los links con nombre (`/?para=…`) para mandar por WhatsApp.
+    Protegida con ?secret=<ADMIN_SECRET>. Todo se arma en el navegador: la
+    lista de nombres no viaja al servidor ni se guarda en ningún lado.
+    """
+    if not es_secreto_admin(request.args.get('secret')):
+        return jsonify({'error': 'Forbidden'}), 403
+    sitio = request.url_root
+    # Render atiende en https pero le pasa la visita a Flask en http.
+    if request.headers.get('X-Forwarded-Proto') == 'https':
+        sitio = sitio.replace('http://', 'https://', 1)
+    return render_template('links.html', sitio=sitio)
+
+
 @app.errorhandler(413)
 def demasiado_grande(_e):
     return jsonify({'success': False,

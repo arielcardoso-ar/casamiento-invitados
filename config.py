@@ -272,17 +272,32 @@ def mapa_link(query):
     return f'https://maps.google.com/maps?q={quote_plus(query)}'
 
 
-def como_llegar(query, link=''):
+def coordenadas_del_embed(embed):
+    """
+    La latitud y longitud que trae el src de un mapa embebido de Google
+    (`!3d<lat>` y `!2d<lng>`), o '' si no las trae. Al compartir un lugar
+    como "Insertar un mapa", Google centra el mapa justo en ese lugar.
+    """
+    import re
+    lat = re.search(r'!3d(-?\d+\.\d+)', embed or '')
+    lng = re.search(r'!2d(-?\d+\.\d+)', embed or '')
+    return f'{lat.group(1)},{lng.group(1)}' if lat and lng else ''
+
+
+def como_llegar(query, link='', coords=''):
     """
     Links para salir manejando con un toque, en la app que use cada uno.
 
     Google Maps usa el link exacto del lugar si lo hay; si no, arma la ruta
-    hasta la búsqueda. Waze sólo entiende búsquedas, así que va con el nombre.
+    hasta la búsqueda. Waze va a las coordenadas si las hay: buscando un
+    nombre como "Salón Ble" puede proponer otro lugar con nombre parecido.
     """
     from urllib.parse import quote_plus
+    waze = (f'https://waze.com/ul?ll={coords}&navigate=yes' if coords
+            else f'https://waze.com/ul?q={quote_plus(query)}&navigate=yes')
     return {
         'google': link or f'https://www.google.com/maps/dir/?api=1&destination={quote_plus(query)}',
-        'waze': f'https://waze.com/ul?q={quote_plus(query)}&navigate=yes',
+        'waze': waze,
     }
 
 
@@ -325,8 +340,9 @@ def contexto():
                           link=mapa_link(CEREMONIA['query'])),
         'fiesta': dict(FIESTA,
                        link=FIESTA['link'] or mapa_link(FIESTA['query'])),
-        'ceremonia_ruta': como_llegar(CEREMONIA['query']),
-        'fiesta_ruta': como_llegar(FIESTA['query'], FIESTA['link']),
+        'ceremonia_ruta': como_llegar(CEREMONIA['query'], '', _env('CEREMONIA_COORDS', '')),
+        'fiesta_ruta': como_llegar(FIESTA['query'], FIESTA['link'],
+                                   _env('FIESTA_COORDS', coordenadas_del_embed(FIESTA['embed']))),
         'gcal_url': google_calendar_url(),
         'rsvp_telefono': RSVP_TELEFONO,
         'rsvp_nombre': RSVP_NOMBRE,
