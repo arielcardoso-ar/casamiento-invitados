@@ -100,6 +100,50 @@ RSVP_MENSAJE = _env(
     f'¡Hola! Confirmo mi asistencia al casamiento de {NOVIA_CORTO} y {NOVIO_CORTO} 🌿',
 )
 
+# ── Preguntas frecuentes ──────────────────────────────────────────────────────
+
+# Las que ya tienen respuesta salen de los datos de arriba. Las que dependen de
+# decisiones de los novios (vestimenta, chicos, cómo llegar, hasta cuándo
+# confirmar) quedan vacías hasta que se completen acá o en Render: vacías no se
+# muestran a los invitados, y en local aparecen marcadas para completar.
+RSVP_FECHA_LIMITE = _env('RSVP_FECHA_LIMITE', '')       # ej. "el 15 de diciembre"
+FAQ_VESTIMENTA = _env('FAQ_VESTIMENTA', '')             # ej. "Elegante. ¡El blanco, para la novia!"
+FAQ_NINOS = _env('FAQ_NINOS', '')                       # ej. "Esta vez la celebración es sólo para adultos."
+FAQ_LLEGAR = _env('FAQ_LLEGAR', '')                     # estacionamiento, traslado iglesia → salón
+
+
+def preguntas_frecuentes():
+    """
+    Las preguntas de la invitación, en orden. Cada una lleva `variable`: dónde
+    se completa si la respuesta todavía está vacía.
+    """
+    return [
+        {'pregunta': '¿A qué hora es?',
+         'respuesta': f'La ceremonia es a las {HORA_CEREMONIA} h en {CEREMONIA["titulo"]}'
+                      + (f', y la fiesta a las {FIESTA["hora"]} h en {FIESTA["titulo"]}.'
+                         if FIESTA.get('hora') else '.'),
+         'variable': ''},
+        {'pregunta': '¿Cómo me visto?', 'respuesta': FAQ_VESTIMENTA,
+         'variable': 'FAQ_VESTIMENTA'},
+        {'pregunta': '¿Pueden ir chicos?', 'respuesta': FAQ_NINOS,
+         'variable': 'FAQ_NINOS'},
+        {'pregunta': '¿Cómo llego de la iglesia al salón? ¿Hay estacionamiento?',
+         'respuesta': FAQ_LLEGAR, 'variable': 'FAQ_LLEGAR'},
+        {'pregunta': '¿Hasta cuándo puedo confirmar?',
+         'respuesta': (f'Hasta {RSVP_FECHA_LIMITE}, desde el formulario de acá abajo o por '
+                       f'WhatsApp al {RSVP_TELEFONO}.') if RSVP_FECHA_LIMITE else '',
+         'variable': 'RSVP_FECHA_LIMITE'},
+        {'pregunta': '¿Puedo sacar fotos?',
+         'respuesta': 'Sí, ¡y queremos verlas! El día del casamiento se habilita la sección '
+                      'Fotos para subirlas desde el celular a un álbum compartido.',
+         'variable': ''},
+        {'pregunta': '¿Qué les regalo?',
+         'respuesta': 'Que estés es lo más importante. Si además querés hacernos un regalo, '
+                      'en la sección Regalo está el alias.',
+         'variable': ''},
+    ]
+
+
 # ── Polaroids de la invitación ────────────────────────────────────────────────
 
 # Cuelgan de fondo a lo largo de la invitación, apagadas, y se revelan al entrar
@@ -272,6 +316,56 @@ def mapa_link(query):
     return f'https://maps.google.com/maps?q={quote_plus(query)}'
 
 
+def coordenadas_del_embed(embed):
+    """
+    La latitud y longitud que trae el src de un mapa embebido de Google
+    (`!3d<lat>` y `!2d<lng>`), o '' si no las trae. Al compartir un lugar
+    como "Insertar un mapa", Google centra el mapa justo en ese lugar.
+    """
+    import re
+    lat = re.search(r'!3d(-?\d+\.\d+)', embed or '')
+    lng = re.search(r'!2d(-?\d+\.\d+)', embed or '')
+    return f'{lat.group(1)},{lng.group(1)}' if lat and lng else ''
+
+
+def como_llegar(query, link='', coords=''):
+    """
+    Links para salir manejando con un toque, en la app que use cada uno.
+
+    Google Maps usa el link exacto del lugar si lo hay; si no, arma la ruta
+    hasta la búsqueda. Waze va a las coordenadas si las hay: buscando un
+    nombre como "Salón Ble" puede proponer otro lugar con nombre parecido.
+    """
+    from urllib.parse import quote_plus
+    waze = (f'https://waze.com/ul?ll={coords}&navigate=yes' if coords
+            else f'https://waze.com/ul?q={quote_plus(query)}&navigate=yes')
+    return {
+        'google': link or f'https://www.google.com/maps/dir/?api=1&destination={quote_plus(query)}',
+        'waze': waze,
+    }
+
+
+def google_calendar_url():
+    """
+    El mismo evento que `/casamiento.ics`, pero como link de Google Calendar.
+
+    En Android el .ics se baja como archivo y hay que ir a buscarlo; este link
+    abre el evento ya cargado, listo para tocar "Guardar".
+    """
+    from urllib.parse import urlencode
+    fmt = '%Y%m%dT%H%M%SZ'
+    inicio = FECHA_EVENTO.astimezone(timezone.utc)
+    fin = inicio + timedelta(hours=DURACION_HORAS)
+    return 'https://calendar.google.com/calendar/render?' + urlencode({
+        'action': 'TEMPLATE',
+        'text': f'Casamiento de {NOVIA} y {NOVIO}',
+        'dates': f'{inicio.strftime(fmt)}/{fin.strftime(fmt)}',
+        'location': f'{CEREMONIA["titulo"]} · {CEREMONIA["detalle"]}',
+        'details': f'Ceremonia {HORA_CEREMONIA} h en {CEREMONIA["titulo"]}. '
+                   f'Fiesta {FIESTA["hora"]} h en {FIESTA["titulo"]}.',
+    }, safe='/')
+
+
 def contexto():
     """Diccionario que se inyecta en todos los templates."""
     return {
@@ -290,6 +384,13 @@ def contexto():
                           link=mapa_link(CEREMONIA['query'])),
         'fiesta': dict(FIESTA,
                        link=FIESTA['link'] or mapa_link(FIESTA['query'])),
+        'ceremonia_ruta': como_llegar(CEREMONIA['query'], '', _env('CEREMONIA_COORDS', '')),
+        'fiesta_ruta': como_llegar(FIESTA['query'], FIESTA['link'],
+                                   _env('FIESTA_COORDS', coordenadas_del_embed(FIESTA['embed']))),
+        'gcal_url': google_calendar_url(),
+        'preguntas': preguntas_frecuentes(),
+        # En local se ven las respuestas que faltan, para saber qué completar.
+        'mostrar_pendientes': not os.environ.get('RENDER'),
         'rsvp_telefono': RSVP_TELEFONO,
         'rsvp_nombre': RSVP_NOMBRE,
         'rsvp_url': f'https://wa.me/{RSVP_WHATSAPP}?text={_quote(RSVP_MENSAJE)}',

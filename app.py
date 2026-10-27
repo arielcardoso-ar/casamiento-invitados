@@ -25,6 +25,7 @@ import cloudinary.api
 import cloudinary.uploader
 from flask import (Flask, Response, jsonify, redirect, render_template, request,
                    send_file, send_from_directory, session, url_for)
+from itsdangerous import BadSignature, URLSafeSerializer
 from werkzeug.utils import secure_filename
 
 import config
@@ -186,6 +187,43 @@ def es_secreto_admin(valor):
     return False
 
 
+# ── Invitaciones con nombre ───────────────────────────────────────────────────
+# Cada link personal lleva `?i=<token>` con a quién se invita y si va con
+# pareja. El token va firmado: quien lo edite para sumarse un lugar obtiene un
+# link que no valida, y la invitación se muestra como la genérica.
+#
+# La firma usa SECRET_KEY (o ADMIN_SECRET si no está): si alguna de las dos
+# cambia, los links que ya se mandaron dejan de reconocerse. No es grave —se ve
+# la invitación general—, pero conviene no tocarlas después de mandarlos.
+
+_firmador = URLSafeSerializer(
+    os.environ.get('SECRET_KEY') or ADMIN_SECRET or app.secret_key,
+    salt='invitacion')
+
+
+def firmar_invitacion(nombre, con_pareja=False, pareja=''):
+    datos = {'n': nombre.strip()[:60]}
+    if con_pareja:
+        datos['p'] = pareja.strip()[:60]   # '' = va con pareja, sin nombre todavía
+    return _firmador.dumps(datos)
+
+
+def leer_invitacion(token):
+    """El invitado del token, o None si no hay token o no es auténtico."""
+    if not token:
+        return None
+    try:
+        datos = _firmador.loads(token)
+    except BadSignature:
+        return None
+    if not isinstance(datos, dict) or not str(datos.get('n') or '').strip():
+        return None
+    con_pareja = 'p' in datos
+    return {'nombre': str(datos['n'])[:60],
+            'con_pareja': con_pareja,
+            'pareja': str(datos.get('p') or '')[:60] if con_pareja else ''}
+
+
 # ── Apertura de la galería ────────────────────────────────────────────────────
 
 def desbloqueado():
@@ -262,7 +300,10 @@ def inyectar_contexto():
 
 @app.route('/')
 def index():
-    return render_template('invitacion.html')
+    token = request.args.get('i', '')
+    invitado = leer_invitacion(token)
+    return render_template('invitacion.html', invitado=invitado,
+                           invitacion_token=token if invitado else '')
 
 
 @app.route('/fotos')
@@ -659,10 +700,19 @@ def api_confirmar():
     if not nombre:
         return jsonify({'success': False, 'message': 'Falta tu nombre'}), 400
 
-    asiste = str(datos.get('asiste', '1')).lower() not in ('0', 'false', 'no')
+    asiste_crudo = str(datos.get('asiste', '1')).lower()
+    asiste = asiste_crudo not in ('0', 'false', 'no')
 
-    # La confirmación es individual: no se aceptan acompañantes. Cada invitado
-    # de la lista tiene que llenar su propio formulario.
+    # La confirmación es individual. La única excepción es el invitado con
+    # pareja, y sólo si lo dice su link firmado: ahí "vamos los dos" deja
+    # también la confirmación de la pareja. Sin un token válido, el "2" vale
+    # como un sí de una sola persona: no hay forma de sumarse lugares.
+    invitado = leer_invitacion(datos.get('invitacion'))
+    pareja = None
+    if asiste_crudo == '2' and invitado and invitado['con_pareja']:
+        pareja = ((datos.get('pareja') or '').strip()[:80]
+                  or invitado['pareja'] or f'Pareja de {nombre}')
+
     registro = {
         'nombre': nombre,
         'asiste': asiste,
@@ -686,7 +736,26 @@ def api_confirmar():
                         restricciones=registro['restricciones'],
                         mensaje=registro['mensaje'])
 
-    return jsonify({'success': True, 'asiste': asiste})
+    if pareja:
+        # Una fila más, igual a cualquier otra: así la cuenta de
+        # /admin/confirmaciones y la planilla salen bien sin cambiar nada.
+        # Las restricciones ya quedan en la fila del invitado (el campo es
+        # "de cualquiera de los dos"): repetirlas las contaría dos veces.
+        registro_pareja = dict(registro, nombre=pareja, restricciones='',
+                               mensaje=f'Viene con {nombre}')
+        try:
+            pareja_id = db.agregar_confirmacion(registro_pareja)
+        except Exception:
+            app.logger.exception('Error guardando la confirmación de la pareja')
+            return jsonify({'success': False,
+                            'message': 'No se pudo guardar. Probá de nuevo.'}), 500
+        google_sync.encolar('confirmacion', id=pareja_id,
+                            clave=db.clave_de('confirmacion', pareja_id),
+                            cuando=config.ahora().strftime('%d/%m/%Y %H:%M'),
+                            nombre=pareja, asiste='Sí', restricciones='',
+                            mensaje=registro_pareja['mensaje'])
+
+    return jsonify({'success': True, 'asiste': asiste, 'dos': bool(pareja)})
 
 
 @app.route('/admin/confirmaciones')
@@ -784,6 +853,76 @@ def admin_canciones():
     lista = sorted(agrupadas.values(), key=lambda c: (-c['veces'], c['titulo'].lower()))
     return render_template('canciones.html', canciones=lista,
                            total=db.contar_canciones())
+
+
+@app.route('/admin/links')
+def admin_links():
+    """
+    Arma los links con nombre (`/?para=…`) para mandar por WhatsApp.
+    Protegida con ?secret=<ADMIN_SECRET>. Todo se arma en el navegador: la
+    lista de nombres no viaja al servidor ni se guarda en ningún lado.
+    """
+    if not es_secreto_admin(request.args.get('secret')):
+        return jsonify({'error': 'Forbidden'}), 403
+    sitio = request.url_root
+    # Render atiende en https pero le pasa la visita a Flask en http.
+    if request.headers.get('X-Forwarded-Proto') == 'https':
+        sitio = sitio.replace('http://', 'https://', 1)
+    return render_template('links.html', sitio=sitio)
+
+
+@app.route('/admin/links/firmar', methods=['POST'])
+def admin_links_firmar():
+    """Firma los tokens de /admin/links. No guarda nada: firma y devuelve."""
+    if not es_secreto_admin(request.args.get('secret')):
+        return jsonify({'error': 'Forbidden'}), 403
+    lista = (request.get_json(silent=True) or {}).get('invitados') or []
+    # Uno por cada pedido y en el mismo orden ('' si vino sin nombre).
+    tokens = [firmar_invitacion(str(i.get('nombre')), bool(i.get('con_pareja')),
+                                str(i.get('pareja') or ''))
+              if isinstance(i, dict) and str(i.get('nombre') or '').strip() else ''
+              for i in lista[:500]]
+    return jsonify({'tokens': tokens})
+
+
+# Palabras que se usan para nombrar a alguien en la lista de invitados pero que
+# nadie escribe al confirmar: "Tía Marta" confirma como "Marta Gómez".
+_TRATAMIENTOS = {'tia', 'tio', 'flia', 'familia', 'abu', 'abuela', 'abuelo',
+                 'prima', 'primo', 'sra', 'sr', 'dr', 'dra'}
+
+
+def _palabras(nombre):
+    import unicodedata
+    plano = unicodedata.normalize('NFKD', nombre or '')
+    plano = ''.join(c for c in plano if not unicodedata.combining(c)).lower()
+    return [p for p in ''.join(c if c.isalnum() else ' ' for c in plano).split()]
+
+
+@app.route('/admin/links/estado', methods=['POST'])
+def admin_links_estado():
+    """
+    Para cada invitado de /admin/links, si ya confirmó ('si', 'no' o '') y
+    con qué nombre, para que los novios vean si el parecido es el correcto.
+
+    Se busca por nombre, porque la confirmación no guarda de qué link vino: es
+    del invitado si todas las palabras de su nombre en la lista (sin "tía",
+    "familia"…) aparecen en el nombre con que confirmó. Como el formulario ya
+    viene con el nombre de la lista escrito, casi siempre coincide.
+    """
+    if not es_secreto_admin(request.args.get('secret')):
+        return jsonify({'error': 'Forbidden'}), 403
+    nombres = (request.get_json(silent=True) or {}).get('nombres') or []
+    # De la más nueva a la más vieja: vale la última respuesta de cada uno.
+    confirmaciones = [(set(_palabras(c['nombre'])), c)
+                      for c in db.get_confirmaciones()]
+    estados = []
+    for nombre in nombres[:500]:
+        buscadas = set(_palabras(str(nombre))) - _TRATAMIENTOS
+        c = next((c for palabras, c in confirmaciones
+                  if buscadas and buscadas <= palabras), None)
+        estados.append({'estado': '', 'como': ''} if c is None else
+                       {'estado': 'si' if c['asiste'] else 'no', 'como': c['nombre']})
+    return jsonify({'estados': estados})
 
 
 @app.errorhandler(413)

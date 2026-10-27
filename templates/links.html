@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+
+{% block title %}Links con nombre — {{ novia_corto }} &amp; {{ novio_corto }}{% endblock %}
+
+{% block styles %}
+.links-head { text-align: center; padding: .5rem 0 1.5rem; }
+.links-head h1 {
+    font-family: var(--font-serif); font-size: clamp(1.6rem, 6vw, 2rem);
+    font-weight: 400; color: var(--green-800); margin-bottom: .4rem;
+}
+.links-head p { color: var(--muted); font-size: .94rem; max-width: 40ch; margin: 0 auto; }
+
+.links-form { display: grid; gap: .5rem; margin-bottom: 1.5rem; }
+.links-form label {
+    font-family: var(--font-ui); font-size: .84rem; font-weight: 600; color: var(--green-800);
+    margin-top: .6rem;
+}
+.links-form .ayuda { font-family: var(--font-ui); font-size: .8rem; color: var(--muted); }
+.links-form textarea.input-field { min-height: 9rem; resize: vertical; line-height: 1.5; }
+.links-form textarea.mensaje { min-height: 5.5rem; }
+.links-form details { margin-top: .6rem; }
+.links-form summary {
+    cursor: pointer; font-family: var(--font-ui); font-size: .84rem; font-weight: 600;
+    color: var(--green-800); padding: .3rem 0;
+}
+.links-form details[open] summary { margin-bottom: .2rem; }
+.links-form details label { display: block; }
+
+.links-filtros { display: flex; flex-wrap: wrap; gap: .4rem; justify-content: center; margin: .8rem 0 1rem; }
+.links-filtros button {
+    font-family: var(--font-ui); font-size: .8rem; font-weight: 600; cursor: pointer;
+    padding: .45rem .85rem; min-height: 36px; border-radius: 99px;
+    background: var(--white); border: 1px solid var(--line); color: var(--ink-soft);
+}
+.links-filtros button[aria-pressed="true"] {
+    background: var(--green-50); border-color: var(--green-400); color: var(--green-800);
+}
+
+.links-lista { list-style: none; display: grid; gap: .6rem; }
+.link-item {
+    padding: .9rem 1rem;
+    background: var(--white); border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+}
+.link-item .quien { font-weight: 600; color: var(--green-800); }
+.link-item .url {
+    display: block; margin: .25rem 0 .7rem;
+    font-family: var(--font-ui); font-size: .78rem; color: var(--muted);
+    overflow-wrap: anywhere;
+}
+.link-item .acciones { display: flex; gap: .5rem; flex-wrap: wrap; }
+.link-item .acciones .btn {
+    flex: 1 1 9rem; min-height: 44px; font-size: .86rem;
+    justify-content: center; text-align: center;
+}
+.link-item .etiqueta {
+    display: inline-block; margin-left: .4rem; padding: .1rem .55rem; border-radius: 99px;
+    font-family: var(--font-ui); font-size: .7rem; font-weight: 600; vertical-align: middle;
+    background: var(--green-50); border: 1px solid var(--line); color: var(--green-700);
+}
+.link-item .etiqueta.dos { background: var(--rose-50); border-color: var(--rose-200); color: var(--rose-700); }
+.link-item .etiqueta.enviado { background: var(--paper-2); color: var(--muted); }
+.link-item .etiqueta.viene { background: var(--green-100); border-color: var(--green-300); color: var(--green-800); }
+.link-item .etiqueta.no-viene { background: var(--paper-2); color: var(--muted); }
+.link-item.listo { opacity: .6; }
+.link-item .como { display: block; font-family: var(--font-ui); font-size: .76rem; color: var(--muted); margin-top: .15rem; }
+.links-nota { text-align: center; font-family: var(--font-ui); font-size: .76rem; color: var(--muted); margin-top: .3rem; }
+
+.links-total { text-align: center; color: var(--muted); font-size: .86rem; margin: 1rem 0 0; }
+.links-copiar { margin: 1.4rem 0 0; }
+{% endblock %}
+
+{% block content %}
+<div class="links-head">
+    <h1>Links con nombre</h1>
+    <p>Cada invitado recibe la invitación con su nombre en el sobre, y si va con
+       pareja, la invitación les habla a los dos. La lista no se guarda en el sitio.</p>
+</div>
+
+<div class="links-form">
+    <label for="nombres">Un invitado por renglón</label>
+    <textarea class="input-field" id="nombres" spellcheck="false"
+              placeholder="Tía Marta&#10;Juli + Nico&#10;Pablo + pareja, 11 5555-6666"></textarea>
+    <p class="ayuda"><strong>Solo el nombre</strong>: invitación personal, un lugar.<br>
+       <strong>Nombre + Pareja</strong>: invitados los dos, dos lugares (<code>Juli + Nico</code>).
+       Si no sabés cómo se llama, poné <code>+ pareja</code> y se lo preguntamos al confirmar.<br>
+       Después de una coma, el celular (<code>11 5555-6666</code> alcanza): WhatsApp abre
+       directo esa conversación.<br>
+       ¿La lista está en una planilla? Copiá las columnas <em>Nombre · Pareja · Celular</em>
+       y pegalas acá tal cual.</p>
+
+    <details>
+        <summary>Los mensajes de WhatsApp</summary>
+        <label for="msjSolo">Invitación personal</label>
+        <textarea class="input-field mensaje" id="msjSolo"></textarea>
+        <label for="msjDos">Con pareja</label>
+        <textarea class="input-field mensaje" id="msjDos"></textarea>
+        <label for="msjRecordar">Recordatorio, a quien todavía no confirmó</label>
+        <textarea class="input-field mensaje" id="msjRecordar"></textarea>
+        <p class="ayuda"><code>{nombre}</code> y <code>{link}</code> se reemplazan en cada uno.
+           Para volver al texto original, borrá todo el mensaje.</p>
+    </details>
+</div>
+
+<p class="links-total" id="total"></p>
+<div class="links-filtros" id="filtros" role="group" aria-label="Mostrar">
+    <button type="button" data-filtro="todos" aria-pressed="true">Todos</button>
+    <button type="button" data-filtro="sin-mandar" aria-pressed="false">Sin mandar</button>
+    <button type="button" data-filtro="sin-confirmar" aria-pressed="false">Sin confirmar</button>
+    <button type="button" data-filtro="confirmados" aria-pressed="false">Confirmaron</button>
+</div>
+<p class="links-nota">Quién confirmó se busca por nombre: si dos invitados se llaman
+   parecido, fijate en el "Confirmó como…".</p>
+<ul class="links-lista" id="lista"></ul>
+<button type="button" class="btn btn-ghost btn-block links-copiar" id="btnPlanilla" hidden>
+    📋 Copiar la lista con los links (para pegar en la planilla)
+</button>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    'use strict';
+    const SITIO = {{ sitio|tojson }};
+    const SECRETO = encodeURIComponent(new URLSearchParams(location.search).get('secret') || '');
+    const FECHA = {{ fecha_larga|tojson }};
+    const MENSAJES = {
+        msjSolo: '¡Hola {nombre}! 💌 Nos casamos el ' + FECHA + ' y queremos que estés. '
+               + 'Acá está tu invitación: {link}',
+        msjDos: '¡Hola {nombre}! 💌 Nos casamos el ' + FECHA + ' y queremos que estén los dos. '
+              + 'Acá está su invitación: {link}',
+        msjRecordar: '¡Hola {nombre}! 🌿 ¿Pudiste ver la invitación? Si nos confirmás en el link '
+                   + 'nos ayudás muchísimo a organizar: {link}',
+    };
+
+    const nombres = document.getElementById('nombres');
+    const lista   = document.getElementById('lista');
+    const total   = document.getElementById('total');
+    const btnPlanilla = document.getElementById('btnPlanilla');
+    const textos  = Object.fromEntries(Object.keys(MENSAJES).map(id => [id, document.getElementById(id)]));
+
+    // Lo que se escribe queda en este navegador, para no tener que volver a
+    // cargar la lista si se cierra la pestaña a mitad de los envíos.
+    const guardado = clave => { try { return localStorage.getItem(clave); } catch { return null; } };
+    const guardar  = (clave, v) => { try { localStorage.setItem(clave, v); } catch {} };
+    nombres.value = guardado('ka:links:nombres') || '';
+    for (const [id, el] of Object.entries(textos)) el.value = guardado('ka:links:' + id) || MENSAJES[id];
+    // A quién ya se le mandó, y qué: 'invitacion' o 'recordatorio'.
+    let enviados = {};
+    try { enviados = JSON.parse(guardado('ka:links:enviados2') || '{}') || {}; } catch {}
+    let filtro = 'todos';
+
+    // Celulares de Argentina como los escribe cualquiera ("11 5555-6666",
+    // "011 15 5555 6666", "+54 9 11…") al formato que pide WhatsApp: 549 + área + número.
+    function celular(crudo) {
+        let d = String(crudo || '').replace(/\D/g, '');
+        if (!d) return '';
+        if (d.startsWith('549')) return d;
+        if (d.startsWith('54')) return '549' + d.slice(2);
+        d = d.replace(/^0/, '');
+        // El 15 después del código de área (11 15 5555 6666) se saca.
+        if (d.length === 12 && d.slice(2, 4) === '15') d = d.slice(0, 2) + d.slice(4);
+        return d.length === 10 ? '549' + d : d;
+    }
+
+    // Un renglón es "Nombre + Pareja, celular" o, pegado de una planilla,
+    // Nombre⇥Pareja⇥Celular. En la columna de pareja, "pareja", "sí" o "x"
+    // quieren decir "con pareja, sin nombre todavía".
+    const SIN_NOMBRE = new Set(['pareja', 'si', 'sí', 'x', '+', '2']);
+    function leerFila(linea) {
+        let nombre, pareja, tel = '';
+        if (linea.includes('\t')) {
+            [nombre = '', pareja = '', tel = ''] = linea.split('\t').map(c => c.trim());
+            pareja = pareja === '' ? undefined : pareja;
+        } else {
+            const [resto, t = ''] = linea.split(/\s*,\s*(?=[\d+\s()-]+$)/);
+            tel = t;
+            [nombre, pareja] = resto.split(/\s*\+\s*/);
+        }
+        const conPareja = pareja !== undefined;
+        const parejaNombre = conPareja && !SIN_NOMBRE.has(pareja.trim().toLowerCase()) ? pareja.trim() : '';
+        return { nombre: nombre.trim().slice(0, 60), con_pareja: conPareja,
+                 pareja: parejaNombre.slice(0, 60), tel: celular(tel) };
+    }
+    const quienes = f => f.con_pareja ? `${f.nombre} y ${f.pareja || 'pareja'}` : f.nombre;
+    const saludo  = f => f.con_pareja && f.pareja ? `${f.nombre} y ${f.pareja}` : f.nombre;
+
+    // El link lleva un token firmado por el sitio: si alguien lo edita para
+    // sumarse un lugar, deja de valer. Por eso se piden al servidor, que
+    // firma y devuelve sin guardar nada.
+    const firmas = new Map();
+    const claveFila = f => JSON.stringify([f.nombre, f.con_pareja, f.pareja]);
+    const pedir = (ruta, cuerpo) => fetch(`${ruta}?secret=${SECRETO}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cuerpo),
+    }).then(r => r.json());
+    async function firmar(filas) {
+        const faltan = filas.filter(f => !firmas.has(claveFila(f)));
+        if (!faltan.length) return;
+        const { tokens } = await pedir('/admin/links/firmar', { invitados: faltan });
+        faltan.forEach((f, i) => firmas.set(claveFila(f), tokens[i]));
+    }
+    const linkPara = f => `${SITIO}?i=${firmas.get(claveFila(f))}`;
+
+    // Quién ya confirmó: se pregunta una vez al abrir y cada vez que cambia
+    // la lista, no a cada tecla.
+    let estados = new Map();
+    const comoConfirmo = new Map();   // el nombre con que confirmó, que puede no ser igual
+    async function consultarEstados(filas) {
+        const pendientes = filas.filter(f => !estados.has(f.nombre));
+        if (!pendientes.length) return;
+        const { estados: r } = await pedir('/admin/links/estado', { nombres: pendientes.map(f => f.nombre) });
+        pendientes.forEach((f, i) => { estados.set(f.nombre, r[i].estado); comoConfirmo.set(f.nombre, r[i].como); });
+    }
+
+    function etiqueta(texto, clase = '') {
+        const el = document.createElement('span');
+        el.className = 'etiqueta ' + clase;
+        el.textContent = texto;
+        return el;
+    }
+
+    let filas = [];
+    let turno = 0;
+    async function pintar() {
+        guardar('ka:links:nombres', nombres.value);
+        for (const [id, el] of Object.entries(textos)) guardar('ka:links:' + id, el.value);
+        filas = nombres.value.split('\n').filter(l => l.trim()).map(leerFila).filter(f => f.nombre);
+        const mio = ++turno;
+        try {
+            await Promise.all([firmar(filas), consultarEstados(filas)]);
+        } catch {
+            total.textContent = 'No se pudieron armar los links. Revisá la conexión.';
+            return;
+        }
+        if (mio !== turno) return;   // ya se escribió algo más nuevo
+        dibujar();
+    }
+
+    function dibujar() {
+        const cuenta = (pred) => filas.filter(pred).length;
+        const lugares = filas.reduce((n, f) => n + (f.con_pareja ? 2 : 1), 0);
+        total.textContent = filas.length
+            ? `${filas.length} invitaciones · ${lugares} lugares · `
+              + `${cuenta(f => enviados[quienes(f)])} mandadas · `
+              + `${cuenta(f => estados.get(f.nombre) === 'si')} confirmaron que vienen`
+            : '';
+        btnPlanilla.hidden = !filas.length;
+
+        const visibles = filas.filter(f => {
+            const estado = estados.get(f.nombre);
+            if (filtro === 'sin-mandar') return !enviados[quienes(f)];
+            if (filtro === 'sin-confirmar') return !estado;
+            if (filtro === 'confirmados') return !!estado;
+            return true;
+        });
+
+        lista.replaceChildren(...visibles.map(f => {
+            const quien = quienes(f);
+            const link = linkPara(f);
+            const estado = estados.get(f.nombre);
+            const mandado = enviados[quien];
+            // Ya mandada y sin respuesta: el botón principal pasa a ser el recordatorio.
+            const recordar = mandado && !estado;
+            const plantilla = recordar ? textos.msjRecordar.value
+                            : f.con_pareja ? textos.msjDos.value : textos.msjSolo.value;
+            const texto = plantilla.replaceAll('{nombre}', saludo(f)).replaceAll('{link}', link);
+
+            const li = document.createElement('li');
+            li.className = 'link-item' + (estado ? ' listo' : '');
+            const nombre = document.createElement('span');
+            nombre.className = 'quien';
+            nombre.textContent = quien;
+            li.append(nombre, etiqueta(f.con_pareja ? '2 lugares' : 'Personal', f.con_pareja ? 'dos' : ''));
+            if (estado) {
+                li.append(etiqueta(estado === 'si' ? '✓ Viene' : 'No puede', estado === 'si' ? 'viene' : 'no-viene'));
+                // Se busca por nombre: si no es exactamente el de la lista, que se vea.
+                const como = comoConfirmo.get(f.nombre);
+                if (como && como.toLowerCase() !== f.nombre.toLowerCase()) {
+                    const nota = document.createElement('span');
+                    nota.className = 'como';
+                    nota.textContent = `Confirmó como "${como}"`;
+                    li.append(nota);
+                }
+            }
+            else if (mandado) li.append(etiqueta(mandado === 'recordatorio' ? 'Recordado' : 'Mandada', 'enviado'));
+
+            const url = document.createElement('a');
+            url.className = 'url'; url.href = link; url.target = '_blank'; url.rel = 'noopener';
+            url.textContent = (f.tel ? `${f.tel} · ` : '') + 'ver cómo le llega';
+
+            const acciones = document.createElement('div');
+            acciones.className = 'acciones';
+            const wa = document.createElement('a');
+            wa.className = 'btn ' + (estado ? 'btn-ghost' : 'btn-primary');
+            wa.href = `https://wa.me/${f.tel}?text=${encodeURIComponent(texto)}`;
+            wa.target = '_blank'; wa.rel = 'noopener';
+            wa.textContent = recordar ? 'Mandar recordatorio' : 'Mandar por WhatsApp';
+            const cp = document.createElement('button');
+            cp.type = 'button'; cp.className = 'btn btn-ghost';
+            cp.textContent = 'Copiar mensaje';
+            cp.addEventListener('click', () => copiar(texto, 'Mensaje copiado'));
+
+            // Marcarlo al tocar cualquiera de los dos.
+            const marcar = () => {
+                enviados[quien] = recordar ? 'recordatorio' : 'invitacion';
+                guardar('ka:links:enviados2', JSON.stringify(enviados));
+                setTimeout(dibujar, 300);
+            };
+            wa.addEventListener('click', marcar);
+            cp.addEventListener('click', marcar);
+
+            acciones.append(wa, cp);
+            li.append(url, acciones);
+            return li;
+        }));
+    }
+
+    // Para la planilla: columnas separadas por tabulación, que es lo que
+    // Google Sheets y Excel entienden al pegar.
+    btnPlanilla.addEventListener('click', () => {
+        const estadoTexto = { si: 'Viene', no: 'No puede' };
+        const renglones = filas.map(f => [
+            f.nombre, f.con_pareja ? (f.pareja || 'pareja') : '', f.con_pareja ? 2 : 1, f.tel,
+            linkPara(f), estadoTexto[estados.get(f.nombre)] || (enviados[quienes(f)] ? 'Mandada' : ''),
+        ].join('\t'));
+        copiar(['Nombre\tPareja\tLugares\tCelular\tLink\tEstado', ...renglones].join('\n'),
+               `${filas.length} invitados copiados`);
+    });
+
+    document.getElementById('filtros').addEventListener('click', e => {
+        const b = e.target.closest('button[data-filtro]');
+        if (!b) return;
+        filtro = b.dataset.filtro;
+        document.querySelectorAll('#filtros button').forEach(x => x.setAttribute('aria-pressed', x === b));
+        dibujar();
+    });
+
+    // Un respiro entre teclas: no hace falta firmar a medio escribir.
+    let espera;
+    const pintarEnUnRato = () => { clearTimeout(espera); espera = setTimeout(pintar, 350); };
+    nombres.addEventListener('input', pintarEnUnRato);
+    // Un mensaje borrado vuelve al original al salir del campo.
+    for (const [id, el] of Object.entries(textos)) {
+        el.addEventListener('input', pintarEnUnRato);
+        el.addEventListener('blur', () => { if (!el.value.trim()) { el.value = MENSAJES[id]; pintar(); } });
+    }
+    pintar();
+})();
+</script>
+{% endblock %}

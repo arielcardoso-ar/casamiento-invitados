@@ -25,6 +25,9 @@ Extras para los novios, todos detrás de `?secret=<ADMIN_SECRET>`:
   entera en formato `tema - artista` para pegarla en el buscador de Spotify.
 - `/admin/google` — estado de la réplica en Drive y qué quedó pendiente.
   Con `&reintentar=1` reencola todo lo que todavía no llegó.
+- `/admin/links` — arma los links personales (individuales o con pareja,
+  ver *Invitación personal o con pareja*) y los manda por WhatsApp de a uno,
+  marcando a quién ya le llegó.
 - `/admin/sync-from-cloudinary` — reconstruye el índice de fotos.
 - `/qr-page` — QR imprimible para los carteles del salón (sin secreto).
 
@@ -91,15 +94,92 @@ van con `loading="lazy"`.
 Si borrás fotos, la invitación sigue andando con las que queden: no cuelga
 marcos vacíos.
 
+### El sobre y el link con nombre
+
+La invitación llega cerrada en un sobre con un lacre `K&A`; un toque lo abre
+y aparece la portada. Sale una sola vez por visita, y nunca si el link lleva un
+`#` (`/#rsvp` va directo al formulario) o `?sobre=0`.
+
+Si al mandarla por WhatsApp le agregás `?para=` con el nombre, el sobre dice
+*Para …*:
+
+```
+https://<tu-sitio>/?para=Familia%20Pérez
+https://<tu-sitio>/?para=Tía%20Marta
+```
+
+(`%20` es el espacio; WhatsApp suele aceptarlo escrito con espacio también,
+pero con `%20` el link no se corta.) Sin `?para=` dice *Para vos*.
+
+### Invitación personal o con pareja
+
+Para eso están los links de `/admin/links?secret=...`: un invitado por renglón,
+y para cada uno el botón **Mandar por WhatsApp** con el mensaje listo.
+
+| Renglón | Qué recibe |
+|---|---|
+| `Tía Marta` | Invitación personal, un lugar. El sobre dice *Para Tía Marta* y el RSVP aclara que es para ella. |
+| `Juli + Nico` | Invitados los dos. Sobre *Para Juli y Nico*, la invitación les habla en plural y el RSVP ofrece **Vamos los dos / Sólo voy yo / No vamos a poder**. |
+| `Pablo + pareja` | Igual, pero sin saber el nombre: el RSVP se lo pregunta al confirmar. |
+| `…, 5491155556666` | Al final de cualquiera: WhatsApp abre directo esa conversación. |
+
+"Vamos los dos" deja **dos filas** en `/admin/confirmaciones` y en la planilla
+(la pareja con el mensaje *Viene con …*), así que las cuentas salen solas.
+
+El link lleva `?i=<token>` **firmado** por el sitio. Si alguien lo edita para
+sumarse un lugar, el token deja de valer y ve la invitación general, donde no
+existe "vamos los dos". La firma usa `SECRET_KEY` (o `ADMIN_SECRET` si no
+está): **no las cambies después de mandar los links**, o dejan de
+reconocerse. La lista de nombres queda sólo en el navegador de quien la
+escribe; el sitio firma y devuelve, sin guardar nada.
+
+Además, en esa misma página:
+
+- **Quién ya confirmó**: cada invitado muestra *✓ Viene* / *No puede* buscando
+  su nombre entre las confirmaciones (sin "tía", "familia"…). Si confirmó con
+  otro nombre, se ve *Confirmó como "…"* para chequear el parecido.
+- **Recordatorio**: a quien ya se le mandó y no contestó, el botón pasa a ser
+  *Mandar recordatorio*, con su propio mensaje. Los tres mensajes (personal,
+  con pareja, recordatorio) se editan en *Los mensajes de WhatsApp*.
+- **Filtros**: todos, sin mandar, sin confirmar, confirmaron.
+- **Desde una planilla**: se pueden pegar las columnas *Nombre · Pareja ·
+  Celular* tal cual. El celular se escribe como sea (`11 5555-6666`,
+  `011 15…`, `+54 9…`) y queda en el formato de WhatsApp.
+- **Copiar la lista con los links**, para pegarla de vuelta en la planilla.
+
+El viejo `?para=Nombre` sigue andando, sólo para el sobre.
+
+### Lo que ayuda al invitado a no olvidarse
+
+- **Botón flotante "Confirmar asistencia"**: aparece al bajar de la portada y
+  se esconde mientras se ve el formulario. Una vez que alguien confirmó desde
+  ese celular, no vuelve a aparecer.
+- **Agendar**: Google Calendar (abre el evento ya cargado, ideal en Android)
+  y el `.ics` de siempre para iPhone y Outlook. Se ofrece en la cuenta
+  regresiva y otra vez apenas el invitado confirma.
+- **Cómo llegar**: debajo de cada mapa, Google Maps y Waze con un toque.
+  Al salón, Waze va por coordenadas: las saca solo del `FIESTA_EMBED`
+  (buscando "Salón Ble" por nombre podía proponer otro lugar). Para la
+  iglesia busca por `CEREMONIA_MAPA`. Cualquiera de los dos se puede fijar a
+  mano con `FIESTA_COORDS` / `CEREMONIA_COORDS` (`-34.60,-58.51`).
+
 ---
 
 ## Correr en local
 
 ```bash
-pip install -r requirements.txt && python app.py
+git fetch origin && git checkout claude/project-thread-91ojww   # o la rama que quieras probar
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+FLASK_DEBUG=1 .venv/bin/python app.py
 ```
 
-Abrí <http://localhost:5001>.
+Abrí <http://localhost:5001>. Con `FLASK_DEBUG=1` los cambios en los
+templates se ven al recargar, sin reiniciar. Para verla como en el celular:
+en Chrome, F12 → el ícono del celular (o abrí `http://<ip-de-tu-compu>:5001`
+desde el teléfono, en la misma red Wi-Fi).
+
+Para probar el sobre de nuevo: abrí `http://localhost:5001/?sobre=1`
+(sólo aparece una vez por pestaña). Con `?para=Tía%20Marta` se ve con nombre.
 
 Sin Cloudinary configurado las fotos se guardan en `static/uploads/` — alcanza
 perfecto para probar.
@@ -134,6 +214,7 @@ tocar el código.
 | `MP_LINK` | Link de cobro de Mercado Pago. **Si lo cargás, el sitio genera solo el QR de pago.** | vacío |
 | `MP_QR_IMG` | QR oficial bajado de la app de MP. Archivo dentro de `static/` o URL. Tiene prioridad sobre `MP_LINK`. | vacío |
 | `RSVP_WHATSAPP` | Teléfono de confirmación, sólo dígitos con país. | `541159632661` |
+| `FAQ_VESTIMENTA`, `FAQ_NINOS`, `FAQ_LLEGAR`, `RSVP_FECHA_LIMITE` | Respuestas de *Por si te lo preguntás* (vestimenta, chicos, cómo llegar al salón, hasta cuándo confirmar). Vacías no se muestran; en local aparecen marcadas para completar. El resto de las preguntas salen solas de los datos de acá. | vacío |
 | `CEREMONIA_*` / `FIESTA_*` | Título, detalle y búsqueda de mapa de cada lugar. `FIESTA_LINK` es el link de Maps al salón y `FIESTA_EMBED` el src de su mapa embebido. | ver `config.py` |
 
 ---
