@@ -112,13 +112,21 @@ for origen, destino, ancho, calidad in (('ramo-29.png', 'ramo.webp', 560, 72), (
     if chico:
         guardar(img, destino.replace('.webp', '-sm.webp'), chico, quality=calidad, method=6)
 
-# Estampilla: el papel crema es parte de ella, así que no se puede quitar
-# "todo lo blanco". Se recorta por diferencia con el fondo, desde el borde.
-rgb = abrir('estampilla-15.png')
-fondo = np.median(np.concatenate([rgb[:8].reshape(-1, 3), rgb[-8:].reshape(-1, 3)]), axis=0)
-dif = np.abs(rgb - fondo).max(axis=2)
-objeto = np.asarray(a_imagen((dif > 0.045).astype(np.float32)).filter(ImageFilter.MedianFilter(3))) > 127
-alfa = a_imagen((~desde_el_borde(objeto)).astype(np.float32)).filter(ImageFilter.GaussianBlur(.8))
-est = Image.open(RAW / 'estampilla-15.png').convert('RGB')
-est.putalpha(alfa)
-guardar(recortar(est, 2), 'estampilla.webp', 200, quality=84, method=6)
+# Estampilla e íconos: tienen partes blancas o crema (el papel de la
+# estampilla, la iglesia), así que no se puede quitar "todo lo blanco".
+# Se recorta por diferencia con el fondo, desde el borde.
+def sin_fondo_desde_el_borde(origen, umbral=0.045):
+    rgb = abrir(origen)
+    fondo = np.median(np.concatenate([rgb[:8].reshape(-1, 3), rgb[-8:].reshape(-1, 3)]), axis=0)
+    dif = np.abs(rgb - fondo).max(axis=2)
+    objeto = np.asarray(a_imagen((dif > umbral).astype(np.float32)).filter(ImageFilter.MedianFilter(3))) > 127
+    alfa = a_imagen((~desde_el_borde(objeto)).astype(np.float32)).filter(ImageFilter.GaussianBlur(.8))
+    img = Image.open(RAW / origen).convert('RGB')
+    img.putalpha(alfa)
+    return recortar(img, 2)
+
+
+guardar(sin_fondo_desde_el_borde('estampilla-15.png'), 'estampilla.webp', 200, quality=84, method=6)
+for origen, destino in (('icono-fecha-19.png', 'icono-fecha.webp'), ('icono-iglesia-4.png', 'icono-iglesia.webp'),
+                        ('icono-fiesta-4.png', 'icono-fiesta.webp')):
+    guardar(sin_fondo_desde_el_borde(origen), destino, 220, quality=82, method=6)
