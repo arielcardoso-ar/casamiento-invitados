@@ -1,0 +1,68 @@
+{#- Preguntas frecuentes de la invitación. Vive aparte de invitacion.html para
+    que se pueda editar sin tocarla: allá es un solo {% include %}.
+    Las preguntas salen de config.preguntas_frecuentes(); las que no tienen
+    respuesta no se muestran, salvo en local, donde aparecen marcadas con la
+    variable que hay que completar. -#}
+{% set visibles = [] %}
+{% for p in preguntas if p.respuesta or mostrar_pendientes %}{% set _ = visibles.append(p) %}{% endfor %}
+{% if visibles %}
+<style>
+    .faq { background: var(--paper); }
+    .faq-lista { max-width: 640px; margin: 0 auto; display: grid; gap: .6rem; }
+    .faq-item {
+        background: var(--white); border: 1px solid var(--line);
+        border-radius: var(--radius-sm); box-shadow: var(--shadow-sm);
+    }
+    .faq-item summary {
+        display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+        list-style: none; cursor: pointer; padding: 1.05rem 1.2rem; min-height: 52px;
+        font-family: var(--font-serif); font-size: clamp(1.1rem, 4vw, 1.25rem);
+        font-weight: 500; color: var(--green-800);
+    }
+    .faq-item summary::-webkit-details-marker { display: none; }
+    /* Una cruz que gira a menos al abrir. */
+    .faq-item summary::after {
+        content: '+'; flex: none; font-family: var(--font-ui); font-size: 1.3rem;
+        font-weight: 300; color: var(--rose-500); transition: transform .3s;
+    }
+    .faq-item[open] summary::after { transform: rotate(45deg); }
+    .faq-item summary:focus-visible { outline: 2px solid var(--green-500); outline-offset: 2px; border-radius: var(--radius-sm); }
+    .faq-item p {
+        padding: 0 1.2rem 1.15rem; margin: 0;
+        font-family: var(--font-ui); font-size: .95rem; line-height: 1.6; color: var(--ink-soft);
+    }
+    .faq-item.pendiente { border-style: dashed; border-color: var(--rose-300); background: var(--rose-50); }
+    .faq-item.pendiente p { color: var(--rose-700); }
+    .faq-item.pendiente code { font-size: .85em; }
+</style>
+
+<!-- ══════════════════════════ PREGUNTAS ══════════════════════════ -->
+<section class="faq" id="preguntas">
+    <h2 class="kicker-script reveal">Por si te lo preguntás</h2>
+    <p class="section-sub reveal">Lo que más nos consultan</p>
+    <div class="faq-lista">
+        {#- La única respuesta que cambia según el link: a quién incluye la invitación. -#}
+        {% if invitado %}
+        <details class="faq-item reveal">
+            <summary>¿Puedo ir con alguien?</summary>
+            {% if invitado.con_pareja %}
+            <p>La invitación es para los dos{% if invitado.pareja %}: {{ invitado.nombre }} y {{ invitado.pareja }}{% endif %}. Con una sola confirmación alcanza.</p>
+            {% else %}
+            <p>Esta invitación es personal, para vos.</p>
+            {% endif %}
+        </details>
+        {% endif %}
+        {% for p in visibles %}
+        <details class="faq-item reveal{% if not p.respuesta %} pendiente{% endif %}">
+            <summary>{{ p.pregunta }}</summary>
+            {% if p.respuesta %}
+            <p>{{ p.respuesta }}</p>
+            {% else %}
+            <p>✏️ Falta la respuesta: completala en <code>{{ p.variable }}</code> (config.py o
+               las variables de Render). Hasta entonces esta pregunta no la ven los invitados.</p>
+            {% endif %}
+        </details>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
