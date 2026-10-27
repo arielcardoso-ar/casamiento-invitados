@@ -214,6 +214,7 @@ tocar el código.
 | `MP_LINK` | Link de cobro de Mercado Pago. **Si lo cargás, el sitio genera solo el QR de pago.** | vacío |
 | `MP_QR_IMG` | QR oficial bajado de la app de MP. Archivo dentro de `static/` o URL. Tiene prioridad sobre `MP_LINK`. | vacío |
 | `RSVP_WHATSAPP` | Teléfono de confirmación, sólo dígitos con país. | `541159632661` |
+| `FAQ_VESTIMENTA`, `FAQ_NINOS`, `FAQ_LLEGAR`, `RSVP_FECHA_LIMITE` | Respuestas de *Por si te lo preguntás* (vestimenta, chicos, cómo llegar al salón, hasta cuándo confirmar). Vacías no se muestran; en local aparecen marcadas para completar. El resto de las preguntas salen solas de los datos de acá. | vacío |
 | `CEREMONIA_*` / `FIESTA_*` | Título, detalle y búsqueda de mapa de cada lugar. `FIESTA_LINK` es el link de Maps al salón y `FIESTA_EMBED` el src de su mapa embebido. | ver `config.py` |
 
 ---
