@@ -302,6 +302,7 @@ def regalo():
                                copy='Por ahora lo único que nos importa es que '
                                     'vengas. Ese día vas a encontrar acá el alias.',
                                apertura_iso=config.APERTURA_REGALO.isoformat(),
+                               clave_estado='regalo',
                                pista='Tip: guardá la página en la pantalla de inicio '
                                      'de tu celular. El día del casamiento se '
                                      'habilita sola.'), 200
@@ -421,6 +422,8 @@ def qr_code():
     pedido = request.args.get('to', '')
 
     if pedido == 'pago':
+        if not regalo_habilitado():
+            return jsonify({'error': 'Todavía no'}), 404
         if not config.MP_LINK:
             return jsonify({'error': 'MP_LINK no configurado'}), 404
         url = config.MP_LINK
@@ -448,6 +451,7 @@ def api_estado():
     """Estado de apertura; la pantalla bloqueada lo consulta para abrirse sola."""
     return jsonify({
         'abierto': fotos_habilitadas(),
+        'regalo': regalo_habilitado(),
         'segundos_restantes': config.segundos_para_apertura(),
         'apertura': config.APERTURA_FOTOS.isoformat(),
         'vista_previa': desbloqueado(),

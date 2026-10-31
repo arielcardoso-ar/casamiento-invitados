@@ -106,7 +106,7 @@
         try {
             const r = await fetch('/api/estado', { cache: 'no-store' });
             const estado = await r.json();
-            if (estado.abierto) location.reload();
+            if (estado[{{ (clave_estado or 'abierto')|tojson }}]) location.reload();
         } catch { /* sin conexión: reintenta en el próximo ciclo */ }
     }, 15000);
 
