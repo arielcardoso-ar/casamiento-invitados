@@ -67,8 +67,10 @@
     </div>
 
     <p class="locked-hint">
+        {% if pista %}{{ pista }}{% else %}
         Tip: guardá la página en la pantalla de inicio de tu celular. El día del
         casamiento se habilita sola y vas a poder subir tus fotos en dos toques.
+        {% endif %}
     </p>
 </div>
 {% endblock %}
@@ -104,7 +106,7 @@
         try {
             const r = await fetch('/api/estado', { cache: 'no-store' });
             const estado = await r.json();
-            if (estado.abierto) location.reload();
+            if (estado[{{ (clave_estado or 'abierto')|tojson }}]) location.reload();
         } catch { /* sin conexión: reintenta en el próximo ciclo */ }
     }, 15000);
 

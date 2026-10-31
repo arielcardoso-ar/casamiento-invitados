@@ -77,7 +77,7 @@
         <button type="button" aria-pressed="false" data-src="/qr?to=fotos"    data-url="{{ request.host_url }}fotos">Subir fotos</button>
         <button type="button" aria-pressed="false" data-src="/qr?to=galeria"  data-url="{{ request.host_url }}galeria">Galería</button>
         <button type="button" aria-pressed="false" data-src="/qr?to=regalo"   data-url="{{ request.host_url }}regalo">Regalo</button>
-        {% if mp_qr %}
+        {% if mp_qr and regalo_abierto %}
         <button type="button" aria-pressed="false" data-src="{{ mp_qr_src }}"
                 data-url="{{ mp_link or 'QR oficial de Mercado Pago' }}"
                 title="Un toque menos para el invitado, pero Mercado Pago cobra comisión">💸 Pago con QR (con comisión)</button>
